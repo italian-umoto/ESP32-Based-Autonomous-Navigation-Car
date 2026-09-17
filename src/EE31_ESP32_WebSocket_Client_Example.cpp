@@ -12,7 +12,7 @@ const char* SERVER_IP = "10.5.9.24";  // IP of server ESP32
 const uint16_t SERVER_PORT = 80;
 const char* SERVER_PATH = "/ws";
 
-const char* CLIENT_ID = "enter_your_id_here";
+const char* CLIENT_ID = "MAGICSMOKE67";
 
 WebSocketsClient webSocket;
 
@@ -106,4 +106,17 @@ void loop() {
       myMessage
     );
   }
+}
+
+
+
+int main() {
+    setup();
+
+    while(1) {
+
+        Serial.println("We are looped");
+        ;
+    }
+    return 0;
 }
