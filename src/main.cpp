@@ -1,14 +1,26 @@
 #include "fsm.h"
-//#include "websocket.h"
+#include <WiFi.h>
+#include <WebSocketsClient.h>
+#include "websocket.h"
 
+Command command;
 FSM fsm;
 
 void setup() {
     Serial.begin(115200);
-    //websocket_init();
+    websocketInit();
 }
 
 void loop() {
     fsm.tick();
-    delay(10);   // or whatever cadence makes sense
+    bool ret = getCommand(command);
+    if (ret) {
+        Serial.println("New Command:");
+        Serial.print("type: ");
+        Serial.println(commandTypeToString(command.type));
+        Serial.print("value: ");
+        Serial.println(command.value);
+    }
+    delay(1000); 
 }
+
