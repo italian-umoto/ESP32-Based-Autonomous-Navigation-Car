@@ -16,6 +16,7 @@ class FSM {
         void stateSix();
 
         void checkChangeState();
+        void setState(int32_t stateNum);
 
         void (FSM::*currentState)() = &FSM::stateIdle;
 
