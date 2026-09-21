@@ -8,3 +8,4 @@ Makefile
 .vscode/launch.json
 .vscode/ipch
 .clangd
+.DS_Store

@@ -1,7 +1,7 @@
 #include "fsm.h"
 #include <stdint.h>
 #include <Arduino.h> // here for preprocessor defines
-//#include "websocket.h"
+#include "websocket.h"
 
 #define STATE_INDICATOR_LED RGB_BUILTIN
 #define BRIGHT 64
