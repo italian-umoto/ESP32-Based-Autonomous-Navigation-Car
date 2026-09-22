@@ -42,6 +42,7 @@ bool getCommand(Command& outCmd) {
     if (command_available) {
         outCmd.type = pending_type;
         outCmd.value = pending_value;
+        outCmd.altValue = secondary_value;
         command_available = false;
         return true;
     }
@@ -60,6 +61,7 @@ static void parseAndStore(const String& message) {
 
         pending_value = value;
         pending_type = CommandType::SET_STATE;
+        secondary_value = 0;
         command_available = true;
     } else if (message.startsWith(motionPrefix) && eq != -1 && comma != -1) {
         int32_t value = message.substring(eq + 1, eq + 1).toInt();

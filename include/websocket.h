@@ -15,6 +15,7 @@ enum class CommandType : uint8_t {
 struct Command {
     CommandType type = CommandType::NONE;
     uint32_t value = 0;
+    uint32_t altValue = 0;
 };
 
 /* commandTypeToString
@@ -51,6 +52,9 @@ bool getCommand(Command& outCmd);
 // ===================================================================
 
 /* Communication over the websocket:
+ *
+ *  BOTH CAN BE SIMPLIFIED TO ONE UNIT, KEEP STATE CHANGE, USE SECONDARY FIELD
+ *  
  *
  * All of our packets are prefixed with CLIENT_ID (MAGICSMOKE67), followed 
  * by a space and then a command string. For example, a valid command is:

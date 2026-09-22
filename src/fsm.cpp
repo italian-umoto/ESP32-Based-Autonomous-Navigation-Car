@@ -53,10 +53,17 @@ void FSM::setState(int32_t stateNum) {
     currentState = statesList[stateNum];
 }
 
-void FSM::checkChangeState() {
+void FSM::setMotor(int32_t state, int32_t value) {
+}
+
+void FSM::checkCommandUpdate() {
     Command cmd;
     if (getCommand(cmd) && cmd.type == CommandType::SET_STATE) {
-        setState(cmd.value);
+        switch (cmd.type) {
+            case CommandType::NONE: return;
+            case CommandType::SET_STATE: setState(cmd.value);
+            case CommandType::SET_MOTOR: setMotor(cmd.value, cmd.altValue);
+        };
     } else if (buttonPressed()) {
         setState(this->state + 1);
     }
@@ -76,49 +83,49 @@ void FSM::checkChangeState() {
 //               PIN          RED     GREEN  BLUE
 // neopixelWrite(RGB_BUILTIN, BRIGHT, 0,     0);
 void FSM::stateIdle() {
-    checkChangeState();
+    checkCommandUpdate();
     Serial.println("In Idle state :)");
     neopixelWrite(RGB_BUILTIN, BRIGHT, 0, 0);
     delay(1000);
 }
 
 void FSM::stateOne() {
-    checkChangeState();
+    checkCommandUpdate();
     Serial.println("In state one");
     neopixelWrite(RGB_BUILTIN, 0, BRIGHT, 0);
     delay(1000);
 }
 
 void FSM::stateTwo() {
-    checkChangeState();
+    checkCommandUpdate();
     Serial.println("In state two");
     neopixelWrite(RGB_BUILTIN, 0, 0, BRIGHT);
     delay(1000);
 }
 
 void FSM::stateThree() {
-    checkChangeState();
+    checkCommandUpdate();
     Serial.println("In state three");
     neopixelWrite(RGB_BUILTIN, BRIGHT, BRIGHT, 0);
     delay(1000);
 }
 
 void FSM::stateFour() {
-    checkChangeState();
+    checkCommandUpdate();
     Serial.println("In state four");
     neopixelWrite(RGB_BUILTIN, BRIGHT, 0, BRIGHT);
     delay(1000);
 }
 
 void FSM::stateFive() {
-    checkChangeState();
+    checkCommandUpdate();
     Serial.println("In state five");
     neopixelWrite(RGB_BUILTIN, 0, BRIGHT, BRIGHT);
     delay(1000);
 }
 
 void FSM::stateSix() {
-    checkChangeState();
+    checkCommandUpdate();
     Serial.println("In state six");
     neopixelWrite(RGB_BUILTIN, BRIGHT, BRIGHT, BRIGHT);
     delay(1000);
