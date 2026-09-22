@@ -15,8 +15,9 @@ class FSM {
         void stateFive();
         void stateSix();
 
-        void checkChangeState();
+        void checkCommandUpdate();
         void setState(int32_t stateNum);
+        void setMotor(int32_t state, int32_t value);
 
         void (FSM::*currentState)() = &FSM::stateIdle;
 

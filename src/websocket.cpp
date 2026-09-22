@@ -27,11 +27,13 @@ unsigned long lastSendTime = 0;
 volatile CommandType pending_type = CommandType::NONE;
 volatile bool command_available = false;
 volatile uint32_t pending_value = 0;
+volatile uint32_t secondary_value = 0; // will be non-0 when in use for cmd
 
 const char* commandTypeToString(CommandType type) {
     switch (type) {
         case CommandType::NONE:      return "NONE";
-        case CommandType::SET_STATE: return "SET_STATE";
+        case CommandType::SET_STATE: return "SET_STATE";    
+        case CommandType::SET_MOTOR: return "SET_MOTOR";
         default:                     return "UNKNOWN";
     }
 }
@@ -40,6 +42,7 @@ bool getCommand(Command& outCmd) {
     if (command_available) {
         outCmd.type = pending_type;
         outCmd.value = pending_value;
+        outCmd.altValue = secondary_value;
         command_available = false;
         return true;
     }
@@ -48,17 +51,28 @@ bool getCommand(Command& outCmd) {
 
 static void parseAndStore(const String& message) {
     int eq = message.indexOf('=');
+    int comma = message.indexOf(',');
 
-    String expectedPrefix = String(CLIENT_ID) + " set: STATE";
+    String statePrefix = String(CLIENT_ID) + " set: STATE";
+    String motionPrefix = String(CLIENT_ID) + " set: MOTION";
 
-    if (message.startsWith(expectedPrefix) && eq != -1) {
+    if (message.startsWith(statePrefix) && eq != -1 && comma == -1) {
         int32_t value = message.substring(eq + 1).toInt();
 
         pending_value = value;
         pending_type = CommandType::SET_STATE;
+        secondary_value = 0;
+        command_available = true;
+    } else if (message.startsWith(motionPrefix) && eq != -1 && comma != -1) {
+        int32_t value = message.substring(eq + 1, eq + 1).toInt();
+        int32_t altValue = message.substring(comma + 1).toInt();
+
+        pending_value = value;
+        secondary_value = altValue;
+        pending_type = CommandType::SET_MOTOR;
         command_available = true;
     }
-    // can add other commands here with set: MOTION or something
+    // elif here to add more commands
 }
 
 // Extracted from starter code loop fn
