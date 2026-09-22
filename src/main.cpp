@@ -1,17 +1,13 @@
 #include <Arduino.h>
 
-// ESP32-S3 wiring: photoresistor voltage divider to GPIO4 (ADC1),
-// and red, green, blue LEDs (each with a current-limiting resistor)
-// to GPIO5, GPIO6, and GPIO7. Keep the sensor and target shaded
-// from changing room light for more repeatable readings.
-constexpr int SENSOR_PIN = 4;
-constexpr int RED_LED_PIN = 5;
-constexpr int GREEN_LED_PIN = 6;
-constexpr int BLUE_LED_PIN = 7;
-constexpr int NUM_SAMPLES = 16;
-constexpr int DARK_THRESHOLD = 80;     // ADC counts above ambient; tune for your setup
-constexpr float COLOR_DOMINANCE = 1.25f; // winning channel must exceed the runner-up
-constexpr int DELAY_MS = 10;
+const int SENSOR_PIN = 4;
+const int RED_LED_PIN = 5;
+const int GREEN_LED_PIN = 6;
+const int BLUE_LED_PIN = 7;
+const int NUM_SAMPLES = 16;
+const int DARK_THRESHOLD = 50;
+const float COLOR_DOMINANCE = 1.25f; // color winner margin
+const int DELAY_MS = 10;
 
 int readAverage() {
     long total = 0;
@@ -28,18 +24,7 @@ int readReflection(int ledPin, int ambient) {
     delay(DELAY_MS);
     const int illuminated = readAverage();
     digitalWrite(ledPin, LOW);
-    // Subtract ambient light and avoid negative readings.
     return max(0, illuminated - ambient);
-}
-
-const char *detectColor(int red, int green, int blue) {
-    const int brightest = max(red, max(green, blue));
-    if (brightest < DARK_THRESHOLD) return "black/dark";
-
-    if (red > green * COLOR_DOMINANCE && red > blue * COLOR_DOMINANCE) return "red";
-    if (green > red * COLOR_DOMINANCE && green > blue * COLOR_DOMINANCE) return "green";
-    if (blue > red * COLOR_DOMINANCE && blue > green * COLOR_DOMINANCE) return "blue";
-    return "mixed/white";
 }
 
 void setup() {
@@ -61,7 +46,6 @@ void loop() {
     digitalWrite(GREEN_LED_PIN, LOW);
     digitalWrite(BLUE_LED_PIN, LOW);
 
-    delay(DELAY_MS);
     const int ambient = readAverage();
     delay(DELAY_MS);
     const int green = readReflection(GREEN_LED_PIN, ambient);
@@ -70,9 +54,15 @@ void loop() {
     delay(DELAY_MS);
     const int blue = readReflection(BLUE_LED_PIN, ambient);
 
+    const int brightest = max(red, max(green, blue));
+    const char* color = "white";
+    if (brightest < DARK_THRESHOLD) color = "dark";
+    else if (red > green * COLOR_DOMINANCE && red > blue * COLOR_DOMINANCE) color = "red";
+    else if (green > red * COLOR_DOMINANCE && green > blue * COLOR_DOMINANCE) color = "green";
+    else if (blue > red * COLOR_DOMINANCE && blue > green * COLOR_DOMINANCE) color = "blue";
     Serial.print("R: "); Serial.print(red);
     Serial.print("  G: "); Serial.print(green);
     Serial.print("  B: "); Serial.print(blue);
-    Serial.print("  color: "); Serial.println(detectColor(red, green, blue));
+    Serial.print("  color: "); Serial.println(color);
     delay(100);
 }
