@@ -15,6 +15,9 @@
 #include "driver/pulse_cnt.h"
 #include "driver/mcpwm_prelude.h"
 #include "motors.h"
+#include "motor_calibration.h"
+#include <Arduino.h>
+#include <Arduino.h>
 
 static const char *TAG = "MOTOR";
 
@@ -32,8 +35,12 @@ static const char *TAG = "MOTOR";
 #define BDC_ENCODER_PCNT_LOW_LIMIT    -1000
 
 // Pid loop update period
-#define BDC_PID_LOOP_PERIOD_MS        10
-#define BDC_PID_EXPECT_SPEED          400
+#define BDC_PID_LOOP_PERIOD_MS        50
+
+// PID parameters
+#define BDC_PID_KP 1
+#define BDC_PID_KI 1
+#define BDC_PID_KD 0.000 // 0.002
 
 // Holds single motor (typedef'd as bdc_motor_t in motors.h)
 struct bdc_motor_t {
@@ -47,23 +54,27 @@ struct bdc_motor_t {
 
 // Holes PID state
 typedef struct {
-    float kp;
-    float ki;
-    float kd;
-    float max_output;
-    float min_output;
+    float setpoint;
+    bool enabled;
     float previous_err1;
     float previous_err2;
     float last_output;
+    int last_encoder_count;
 } pid_ctrl_t;
 
-// Combines motor + PID
 typedef struct {
     bdc_motor_t *motor;
     pcnt_unit_handle_t pcnt_encoder;
-    pid_ctrl_t *pid_ctrl;
-    int report_pulses;
 } motor_control_context_t;
+
+bdc_motor_t left_motor;
+pid_ctrl_t left_pid_ctrl;
+motor_control_context_t left_motor_ctrl_ctx;
+
+
+bdc_motor_t right_motor;
+pid_ctrl_t right_pid_ctrl;
+motor_control_context_t right_motor_ctrl_ctx;
 
 static esp_err_t bdc_motor_new_mcpwm_device(bdc_motor_t *motor, int group_id, uint32_t resolution_hz, uint32_t pwm_freq_hz, int pwma_gpio_num, int pwmb_gpio_num)
 {
@@ -161,71 +172,81 @@ esp_err_t bdc_motor_brake(bdc_motor_t *motor)
     return ESP_OK;
 }
 
-// Not using PID for now, measurement only.
 
-// static float pid_clamp(float value, float min_value, float max_value)
-// {
-//     if (value < min_value) {
-//         return min_value;
-//     }
-//     if (value > max_value) {
-//         return max_value;
-//     }
-//     return value;
-// }
-
-// static void pid_new_control_block(pid_ctrl_t *pid, float kp, float ki, float kd, float max_output, float min_output)
-// {
-//     pid->kp = kp;
-//     pid->ki = ki;
-//     pid->kd = kd;
-//     pid->max_output = max_output;
-//     pid->min_output = min_output;
-//     pid->previous_err1 = 0;
-//     pid->previous_err2 = 0;
-//     pid->last_output = 0;
-// }
-
-// static float pid_compute(pid_ctrl_t *pid, float error)
-// {
-//     float output = (error - pid->previous_err1) * pid->kp +
-//                    (error - pid->previous_err1 - pid->previous_err1 + pid->previous_err2) * pid->kd +
-//                    error * pid->ki +
-//                    pid->last_output;
-//     output = pid_clamp(output, pid->min_output, pid->max_output);
-
-//     pid->previous_err2 = pid->previous_err1;
-//     pid->previous_err1 = error;
-//     pid->last_output = output;
-//     return output;
-// }
-
-// static void pid_loop_cb(void *args)
-// {
-//     static int last_pulse_count = 0;
-//     motor_control_context_t *ctx = (motor_control_context_t *)args;
-//     pcnt_unit_handle_t pcnt_unit = ctx->pcnt_encoder;
-//     pid_ctrl_t *pid_ctrl = ctx->pid_ctrl;
-//     bdc_motor_t *motor = ctx->motor;
-
-//     int cur_pulse_count = 0;
-//     pcnt_unit_get_count(pcnt_unit, &cur_pulse_count);
-//     int real_pulses = cur_pulse_count - last_pulse_count;
-//     last_pulse_count = cur_pulse_count;
-//     ctx->report_pulses = real_pulses;
-
-//     float error = BDC_PID_EXPECT_SPEED - real_pulses;
-//     float new_speed = pid_compute(pid_ctrl, error);
-//     bdc_motor_set_speed(motor, (uint32_t)new_speed);
-// }
+static float clamp(float value, float min_value, float max_value)
+{
+    if (value < min_value) {
+        return min_value;
+    }
+    if (value > max_value) {
+        return max_value;
+    }
+    return value;
+}
 
 
-void create_one_motor_with_encoder(bdc_motor_t * motor, pid_ctrl_t * pid_ctrl, motor_control_context_t * motor_ctrl_ctx, int group_id, int motor_M1, int motor_M2, int encoder_A, int encoder_B) {
+static float pid_compute(pid_ctrl_t *pid, float error)
+{
+    float output = (error - pid->previous_err1) * BDC_PID_KP +
+                   (error - pid->previous_err1 - pid->previous_err1 + pid->previous_err2) * BDC_PID_KD +
+                   error * BDC_PID_KI +
+                   pid->last_output;
+    output = clamp(output, -(BDC_MCPWM_DUTY_TICK_MAX - 1), BDC_MCPWM_DUTY_TICK_MAX - 1);
+
+    pid->previous_err2 = pid->previous_err1;
+    pid->previous_err1 = error;
+    pid->last_output = output;
+    return output;
+}
+
+static void pid_loop_cb(void *args) // args ignored
+{
+    if(left_pid_ctrl.enabled) {
+        int next_left_count = left_encoder_count();
+        int count_delta = next_left_count - left_pid_ctrl.last_encoder_count;
+        int cps = count_delta * (1000 / BDC_PID_LOOP_PERIOD_MS);
+        float error = left_pid_ctrl.setpoint - cps;
+        float feedback_left_speed = pid_compute(&left_pid_ctrl, error);
+        float speed = feedforward_left_speed(left_pid_ctrl.setpoint) + feedback_left_speed;
+        left_set_signed_speed(speed);
+        left_pid_ctrl.last_encoder_count = next_left_count;
+    }
+
+    if(right_pid_ctrl.enabled) {
+        int next_right_count = right_encoder_count();
+        int count_delta = next_right_count - right_pid_ctrl.last_encoder_count;
+        int cps = count_delta * (1000 / BDC_PID_LOOP_PERIOD_MS);
+        float error = right_pid_ctrl.setpoint - cps;
+        float feedback_right_speed = pid_compute(&right_pid_ctrl, error);
+        float speed = feedforward_right_speed(right_pid_ctrl.setpoint) + feedback_right_speed;
+        right_set_signed_speed(speed);
+        right_pid_ctrl.last_encoder_count = next_right_count;
+    }
+    
+}
+
+void print_pid_debug() {
+    Serial.printf("L: en=%d set=%.0f cps=%.0f err=%.0f fb=%.1f count=%d\n",
+                  left_pid_ctrl.enabled,
+                  left_pid_ctrl.setpoint,
+                  left_pid_ctrl.setpoint - left_pid_ctrl.previous_err1,
+                  left_pid_ctrl.previous_err1,
+                  left_pid_ctrl.last_output,
+                  left_encoder_count());
+    Serial.printf("R: en=%d set=%.0f cps=%.0f err=%.0f fb=%.1f count=%d\n",
+                  right_pid_ctrl.enabled,
+                  right_pid_ctrl.setpoint,
+                  right_pid_ctrl.setpoint - right_pid_ctrl.previous_err1,
+                  right_pid_ctrl.previous_err1,
+                  right_pid_ctrl.last_output,
+                  right_encoder_count());
+}
+
+void create_one_motor_with_encoder(bdc_motor_t * motor, motor_control_context_t * motor_ctrl_ctx, int group_id, int motor_M1, int motor_M2, int encoder_A, int encoder_B) {
     ESP_LOGI(TAG, "Create DC motor");
     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(motor, group_id, BDC_MCPWM_TIMER_RESOLUTION_HZ, BDC_MCPWM_FREQ_HZ, motor_M1, motor_M2));
 
     motor_ctrl_ctx -> motor = motor;
-    motor_ctrl_ctx -> pid_ctrl = pid_ctrl;
 
     ESP_LOGI(TAG, "Init pcnt driver to decode rotary signal");
     pcnt_unit_config_t unit_config = {
@@ -262,128 +283,95 @@ void create_one_motor_with_encoder(bdc_motor_t * motor, pid_ctrl_t * pid_ctrl, m
     ESP_ERROR_CHECK(pcnt_unit_start(pcnt_unit));
     motor_ctrl_ctx -> pcnt_encoder = pcnt_unit;
     
-    // ESP_LOGI(TAG, "Create PID control block");
-    // // pid_new_control_block(&pid_ctrl, 0.6, 0.4, 0.2, BDC_MCPWM_DUTY_TICK_MAX - 1, 0);
-    // motor_ctrl_ctx -> pid_ctrl = &pid_ctrl;
 
-    // ESP_LOGI(TAG, "Create a timer to do PID calculation periodically");
-    // esp_timer_create_args_t periodic_timer_args = {};
-    // periodic_timer_args.callback = pid_loop_cb;
-    // periodic_timer_args.arg = &motor_ctrl_ctx;
-    // periodic_timer_args.name = "pid_loop";
-    // esp_timer_handle_t pid_loop_timer = NULL;
-    // ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &pid_loop_timer));
 
     ESP_LOGI(TAG, "Enable motor");
     ESP_ERROR_CHECK(bdc_motor_enable(motor));
     ESP_LOGI(TAG, "Forward motor");
     ESP_ERROR_CHECK(bdc_motor_forward(motor));
-
-    // ESP_LOGI(TAG, "Start motor speed loop");
-    // ESP_ERROR_CHECK(esp_timer_start_periodic(pid_loop_timer, BDC_PID_LOOP_PERIOD_MS * 1000));
-
-
 }
 
 
-bdc_motor_t left_motor;
-pid_ctrl_t left_pid_ctrl;
-motor_control_context_t left_motor_ctrl_ctx;
 
-
-bdc_motor_t right_motor;
-pid_ctrl_t right_pid_ctrl;
-motor_control_context_t right_motor_ctrl_ctx;
 
 
 void setup_motors() {
-    create_one_motor_with_encoder(&left_motor,  &left_pid_ctrl,  &left_motor_ctrl_ctx,  0, LEFT_M1,  LEFT_M2,  LEFT_A,  LEFT_B);
-    create_one_motor_with_encoder(&right_motor, &right_pid_ctrl, &right_motor_ctrl_ctx, 1, RIGHT_M1, RIGHT_M2, RIGHT_A, RIGHT_B);
+    create_one_motor_with_encoder(&left_motor,  &left_motor_ctrl_ctx,  0, LEFT_M1,  LEFT_M2,  LEFT_A,  LEFT_B);
+    create_one_motor_with_encoder(&right_motor, &right_motor_ctrl_ctx, 1, RIGHT_M1, RIGHT_M2, RIGHT_A, RIGHT_B);
+
     
+    // setup single shared PID  loop
+
+    ESP_LOGI(TAG, "Create PID loop");
+
+    esp_timer_create_args_t periodic_timer_args = {};
+    periodic_timer_args.callback = pid_loop_cb;
+    periodic_timer_args.name = "pid_loop";
+    esp_timer_handle_t pid_loop_timer = NULL;
+    ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &pid_loop_timer));
+
+    ESP_LOGI(TAG, "Start motor speed loop");
+    ESP_ERROR_CHECK(esp_timer_start_periodic(pid_loop_timer, BDC_PID_LOOP_PERIOD_MS * 1000));
 }
+
+
 
 void loop_motors() {
 
 }
 
+
 int left_encoder_count() {
     int count = 0;
     ESP_ERROR_CHECK(pcnt_unit_get_count(left_motor_ctrl_ctx.pcnt_encoder, &count));
-    return count;
+    return -count;
 }
 
 int right_encoder_count() {
     int count = 0;
     ESP_ERROR_CHECK(pcnt_unit_get_count(right_motor_ctrl_ctx.pcnt_encoder, &count));
-    return count;
+    return -count;
 }
 
-// void app_main(void)
-// {
-//     static bdc_motor_t motor = {};
-//     static pid_ctrl_t pid_ctrl = {};
-//     static motor_control_context_t motor_ctrl_ctx = {};
+void left_set_signed_speed (int speed) {
+    speed = clamp(speed, -(BDC_MCPWM_DUTY_TICK_MAX - 1), BDC_MCPWM_DUTY_TICK_MAX - 1);
+    if (speed > 0) {
+        bdc_motor_forward(&left_motor);
+        bdc_motor_set_speed(&left_motor, speed);
 
-//     ESP_LOGI(TAG, "Create DC motor");
-//     ESP_ERROR_CHECK(bdc_motor_new_mcpwm_device(&motor, 0, BDC_MCPWM_TIMER_RESOLUTION_HZ, BDC_MCPWM_FREQ_HZ, BDC_MCPWM_GPIO_A, BDC_MCPWM_GPIO_B));
-//     motor_ctrl_ctx.motor = &motor;
+    } else {
+        bdc_motor_reverse(&left_motor);
+        bdc_motor_set_speed(&left_motor, -speed);
+    }
+}
 
-//     ESP_LOGI(TAG, "Init pcnt driver to decode rotary signal");
-//     pcnt_unit_config_t unit_config = {
-//         .low_limit = BDC_ENCODER_PCNT_LOW_LIMIT,
-//         .high_limit = BDC_ENCODER_PCNT_HIGH_LIMIT,
-//         .flags = { .accum_count = true },
-//     };
-//     pcnt_unit_handle_t pcnt_unit = NULL;
-//     ESP_ERROR_CHECK(pcnt_new_unit(&unit_config, &pcnt_unit));
-//     pcnt_glitch_filter_config_t filter_config = {
-//         .max_glitch_ns = 1000,
-//     };
-//     ESP_ERROR_CHECK(pcnt_unit_set_glitch_filter(pcnt_unit, &filter_config));
-//     pcnt_chan_config_t chan_a_config = {
-//         .edge_gpio_num = BDC_ENCODER_GPIO_A,
-//         .level_gpio_num = BDC_ENCODER_GPIO_B,
-//     };
-//     pcnt_channel_handle_t pcnt_chan_a = NULL;
-//     ESP_ERROR_CHECK(pcnt_new_channel(pcnt_unit, &chan_a_config, &pcnt_chan_a));
-//     pcnt_chan_config_t chan_b_config = {
-//         .edge_gpio_num = BDC_ENCODER_GPIO_B,
-//         .level_gpio_num = BDC_ENCODER_GPIO_A,
-//     };
-//     pcnt_channel_handle_t pcnt_chan_b = NULL;
-//     ESP_ERROR_CHECK(pcnt_new_channel(pcnt_unit, &chan_b_config, &pcnt_chan_b));
-//     ESP_ERROR_CHECK(pcnt_channel_set_edge_action(pcnt_chan_a, PCNT_CHANNEL_EDGE_ACTION_DECREASE, PCNT_CHANNEL_EDGE_ACTION_INCREASE));
-//     ESP_ERROR_CHECK(pcnt_channel_set_level_action(pcnt_chan_a, PCNT_CHANNEL_LEVEL_ACTION_KEEP, PCNT_CHANNEL_LEVEL_ACTION_INVERSE));
-//     ESP_ERROR_CHECK(pcnt_channel_set_edge_action(pcnt_chan_b, PCNT_CHANNEL_EDGE_ACTION_INCREASE, PCNT_CHANNEL_EDGE_ACTION_DECREASE));
-//     ESP_ERROR_CHECK(pcnt_channel_set_level_action(pcnt_chan_b, PCNT_CHANNEL_LEVEL_ACTION_KEEP, PCNT_CHANNEL_LEVEL_ACTION_INVERSE));
-//     ESP_ERROR_CHECK(pcnt_unit_add_watch_point(pcnt_unit, BDC_ENCODER_PCNT_HIGH_LIMIT));
-//     ESP_ERROR_CHECK(pcnt_unit_add_watch_point(pcnt_unit, BDC_ENCODER_PCNT_LOW_LIMIT));
-//     ESP_ERROR_CHECK(pcnt_unit_enable(pcnt_unit));
-//     ESP_ERROR_CHECK(pcnt_unit_clear_count(pcnt_unit));
-//     ESP_ERROR_CHECK(pcnt_unit_start(pcnt_unit));
-//     motor_ctrl_ctx.pcnt_encoder = pcnt_unit;
+void right_set_signed_speed (int speed) {
+    speed = clamp(speed, -(BDC_MCPWM_DUTY_TICK_MAX - 1), BDC_MCPWM_DUTY_TICK_MAX - 1);
+    if (speed > 0) {
+        bdc_motor_forward(&right_motor);
+        bdc_motor_set_speed(&right_motor, speed);
 
-//     ESP_LOGI(TAG, "Create PID control block");
-//     pid_new_control_block(&pid_ctrl, 0.6, 0.4, 0.2, BDC_MCPWM_DUTY_TICK_MAX - 1, 0);
-//     motor_ctrl_ctx.pid_ctrl = &pid_ctrl;
+    } else {
+        bdc_motor_reverse(&right_motor);
+        bdc_motor_set_speed(&right_motor, -speed);
+    }
+}
 
-//     ESP_LOGI(TAG, "Create a timer to do PID calculation periodically");
-//     esp_timer_create_args_t periodic_timer_args = {};
-//     periodic_timer_args.callback = pid_loop_cb;
-//     periodic_timer_args.arg = &motor_ctrl_ctx;
-//     periodic_timer_args.name = "pid_loop";
-//     esp_timer_handle_t pid_loop_timer = NULL;
-//     ESP_ERROR_CHECK(esp_timer_create(&periodic_timer_args, &pid_loop_timer));
+void enable_pid() {
+    left_pid_ctrl.last_encoder_count = left_encoder_count();
+    right_pid_ctrl.last_encoder_count = right_encoder_count();
 
-//     ESP_LOGI(TAG, "Enable motor");
-//     ESP_ERROR_CHECK(bdc_motor_enable(&motor));
-//     ESP_LOGI(TAG, "Forward motor");
-//     ESP_ERROR_CHECK(bdc_motor_forward(&motor));
+    left_pid_ctrl.enabled = true;
+    right_pid_ctrl.enabled = true;
+}
 
-//     ESP_LOGI(TAG, "Start motor speed loop");
-//     ESP_ERROR_CHECK(esp_timer_start_periodic(pid_loop_timer, BDC_PID_LOOP_PERIOD_MS * 1000));
 
-//     while (1) {
-//         vTaskDelay(pdMS_TO_TICKS(100));
-//     }
-// }
+void left_set_speed_pid(int speed){
+    if(!left_pid_ctrl.enabled) enable_pid();
+    left_pid_ctrl.setpoint=speed;   
+}
+
+void right_set_speed_pid(int speed){
+    if(!right_pid_ctrl.enabled) enable_pid();
+    right_pid_ctrl.setpoint=speed;
+}

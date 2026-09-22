@@ -17,8 +17,10 @@ void setup() {
     // bdc_motor_forward(&right_motor);
     // bdc_motor_set_speed(&left_motor, BDC_MCPWM_DUTY_TICK_MAX / 2);
     // bdc_motor_set_speed(&right_motor, BDC_MCPWM_DUTY_TICK_MAX / 2);
-    delay (1000);
-    run_motor_test();
+    // delay (1000);
+    // run_motor_test();
+
+    enable_pid();
 
 }
 
@@ -29,7 +31,24 @@ void loop() {
     // Serial.print("Right: ");
     // Serial.print(right_encoder_count());
     // Serial.println("");
-    delay(100);
+    left_set_speed_pid(2000);
+    right_set_speed_pid(-2000);
+    for (int i =0;i<20; i ++){
+        print_pid_debug();
+        delay(100);
+    }
+    left_set_speed_pid(000);
+    right_set_speed_pid(000);
+    for (int i =0;i<20; i ++){
+        print_pid_debug();
+        delay(100);
+    }
+    left_set_speed_pid(-2000);
+    right_set_speed_pid(2000);
+    for (int i =0;i<20; i ++){
+        print_pid_debug();
+        delay(100);
+    }
 
     // fsm.tick();
     // bool ret = getCommand(command);

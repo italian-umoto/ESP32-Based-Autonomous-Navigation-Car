@@ -28,7 +28,19 @@ esp_err_t bdc_motor_coast(bdc_motor_t *motor);
 esp_err_t bdc_motor_brake(bdc_motor_t *motor);
 
 // Raw accumulated quadrature count (4 counts per encoder cycle), signed 32-bit,
-// continuous across the +/-1000 hardware limits. Zeroed at setup_motors(). 
-// Will take 10 days @ 100% to wrap (so it won't)
+// continuous across the +/-1000 hardware limits. Zeroed at setup_motors().
+// Forward is positive. Will take 10 days @ 100% to wrap (so it won't)
 int left_encoder_count();
 int right_encoder_count();
+
+// Open-loop: sign picks direction, magnitude is duty ticks (0 .. BDC_MCPWM_DUTY_TICK_MAX - 1)
+void left_set_signed_speed(int speed);
+void right_set_signed_speed(int speed);
+
+// Closed-loop. enable_pid() snapshots both encoder counts and turns on the
+// loop for both sides; the set_speed_pid calls do this automatically if needed.
+// Setpoints are in encoder counts per second, forward positive.
+void enable_pid();
+void left_set_speed_pid(int speed);
+void right_set_speed_pid(int speed);
+void print_pid_debug();
