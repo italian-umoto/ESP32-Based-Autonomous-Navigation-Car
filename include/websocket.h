@@ -4,6 +4,7 @@
 enum class CommandType : uint8_t {
     NONE,
     SET_STATE,
+    SET_MOTOR,
 };
 
 /* Command
@@ -56,7 +57,24 @@ bool getCommand(Command& outCmd);
  *
  *              'MAGICSMOKE67 set: STATE=1'
  *
- * More commands will be implemented, such as motion: TURN=90 or other
+ * STATE VALUES:
+ *  value in packet represents state of machine (0-6), values outside
+ *  are undefined by the websocket
+ *
+ * MOTOR VALUES:
+ *  0 => Stop
+ *  1 => Both motors forward
+ *  2 => Both motors backward
+ *  3 => Pivot CW
+ *  4 => Pivot CCW
+ *  5 => Right turn at radius r
+ *  6 => Left turn at radius r
+ *
+ *              'MAGICSMOKE67 set: MOTOR =1,50'
+ *
+ *  For motor commands with no secondary argument, use X to fill null
+ *
+ *              'MAGICSMOKE67 set: MOTOR =0,X'
  */
 
 // ===================================================================
