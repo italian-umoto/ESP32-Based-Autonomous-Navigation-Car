@@ -9,7 +9,6 @@ ESP32-Based-Autonomous-Navigation-Car is a group project created for **Junior De
 * [Feature 1]
 * [Feature 2]
 * [Feature 3]
-* [Feature 4]
 
 ## Technologies Used
 
