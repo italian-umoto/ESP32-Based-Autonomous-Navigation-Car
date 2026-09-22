@@ -1,13 +1,13 @@
 #include <Arduino.h>
 
-const int SENSOR_PIN = 4;
-const int RED_LED_PIN = 5;
-const int GREEN_LED_PIN = 6;
-const int BLUE_LED_PIN = 7;
-const int NUM_SAMPLES = 16;
-const int DARK_THRESHOLD = 50;
-const float COLOR_DOMINANCE = 1.25f; // color winner margin
-const int DELAY_MS = 10;
+constexpr int SENSOR_PIN = 4;
+constexpr int RED_LED_PIN = 5;
+constexpr int GREEN_LED_PIN = 6;
+constexpr int BLUE_LED_PIN = 7;
+constexpr int NUM_SAMPLES = 16;
+constexpr int DARK_THRESHOLD = 50;
+constexpr float COLOR_DOMINANCE = 1.25f; // color winner margin
+constexpr int DELAY_MS = 10;
 
 int readAverage() {
     long total = 0;
@@ -47,11 +47,8 @@ void loop() {
     digitalWrite(BLUE_LED_PIN, LOW);
 
     const int ambient = readAverage();
-    delay(DELAY_MS);
-    const int green = readReflection(GREEN_LED_PIN, ambient);
-    delay(DELAY_MS);
     const int red = readReflection(RED_LED_PIN, ambient);
-    delay(DELAY_MS);
+    const int green = readReflection(GREEN_LED_PIN, ambient);
     const int blue = readReflection(BLUE_LED_PIN, ambient);
 
     const int brightest = max(red, max(green, blue));
