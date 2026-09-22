@@ -5,7 +5,7 @@ constexpr int RED_LED_PIN = 5;
 constexpr int GREEN_LED_PIN = 6;
 constexpr int BLUE_LED_PIN = 7;
 constexpr int NUM_SAMPLES = 16;
-constexpr int DARK_THRESHOLD = 50;
+constexpr int DARK_THRESHOLD = 30;
 constexpr float COLOR_DOMINANCE = 1.25f; // color winner margin
 constexpr int DELAY_MS = 10;
 
@@ -47,15 +47,18 @@ void loop() {
     digitalWrite(BLUE_LED_PIN, LOW);
 
     const int ambient = readAverage();
+    delay(100);
     const int red = readReflection(RED_LED_PIN, ambient);
+    delay(100);
     const int green = readReflection(GREEN_LED_PIN, ambient);
+    delay(100);
     const int blue = readReflection(BLUE_LED_PIN, ambient);
 
     const int brightest = max(red, max(green, blue));
     const char* color = "white";
     if (brightest < DARK_THRESHOLD) color = "dark";
     else if (red > green * COLOR_DOMINANCE && red > blue * COLOR_DOMINANCE) color = "red";
-    else if (green > red * COLOR_DOMINANCE && green > blue * COLOR_DOMINANCE) color = "green";
+    else if (green > blue * COLOR_DOMINANCE && red > blue * COLOR_DOMINANCE) color = "yellow";
     else if (blue > red * COLOR_DOMINANCE && blue > green * COLOR_DOMINANCE) color = "blue";
     Serial.print("R: "); Serial.print(red);
     Serial.print("  G: "); Serial.print(green);
