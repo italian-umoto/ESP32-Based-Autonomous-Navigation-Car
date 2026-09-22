@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include "esp_err.h"
 
 class FSM {
     public:
@@ -7,28 +8,27 @@ class FSM {
         FSM();
 
     private:
-        void stateIdle();
-        void stateOne();
-        void stateTwo();
-        void stateThree();
-        void stateFour();
-        void stateFive();
-        void stateSix();
+        void stateStop();
+        void stateForward();
+        void stateBackward();
+        void statePivotCW();
+        void statePivotCCW();
+        void stateRightTurn();
+        void stateLeftTurn();
 
         void checkCommandUpdate();
-        void setState(int32_t stateNum);
-        void setMotor(int32_t state, int32_t value);
+        void updateState(int32_t state, int32_t value);
 
-        void (FSM::*currentState)() = &FSM::stateIdle;
+        void (FSM::*currentState)() = &FSM::stateStop;
 
         static constexpr void (FSM::*statesList[])() = {
-            &FSM::stateIdle,
-            &FSM::stateOne,
-            &FSM::stateTwo,
-            &FSM::stateThree,
-            &FSM::stateFour,
-            &FSM::stateFive,
-            &FSM::stateSix,
+            &FSM::stateStop,
+            &FSM::stateForward,
+            &FSM::stateBackward,
+            &FSM::statePivotCW,
+            &FSM::statePivotCCW,
+            &FSM::stateRightTurn,
+            &FSM::stateLeftTurn,
         };
 
         // 7 is set in canvas assignment

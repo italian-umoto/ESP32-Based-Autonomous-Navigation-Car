@@ -1,7 +1,11 @@
 #include "fsm.h"
 #include <stdint.h>
-#include <Arduino.h> // here for preprocessor defines
+#include <Arduino.h> 
 #include "websocket.h"
+#include "motors.h"
+
+
+static const char *TAG = "MOTOR";
 
 #define STATE_INDICATOR_LED RGB_BUILTIN
 #define BRIGHT 64
@@ -9,7 +13,6 @@
 #define DEBOUNCE_DELAY 10
 
 
-// google.com solution for debounced button press
 static bool buttonPressed() {
     static int lastButtonState = HIGH;
     static int currentButtonState = HIGH;
@@ -43,91 +46,82 @@ void FSM::tick() {
     (this->*currentState)();
 }
 
-void FSM::setState(int32_t stateNum) {
-    if (stateNum < 0 || stateNum >= numStates) {
+void FSM::updateState(int32_t state, int32_t value) {
+    if (state < 0 || state >= numStates) {
         Serial.print("Invalid state: ");
-        Serial.println(stateNum);
+        Serial.println(state);
         return;
     }
-    this->state = stateNum;
-    currentState = statesList[stateNum];
-}
-
-void FSM::setMotor(int32_t state, int32_t value) {
+    this->state = state;
+    currentState = statesList[state];
 }
 
 void FSM::checkCommandUpdate() {
     Command cmd;
-    if (getCommand(cmd) && cmd.type == CommandType::SET_STATE) {
-        switch (cmd.type) {
-            case CommandType::NONE: return;
-            case CommandType::SET_STATE: setState(cmd.value);
-            case CommandType::SET_MOTOR: setMotor(cmd.value, cmd.altValue);
-        };
+    if (getCommand(cmd)) {
+        updateState(cmd.value, cmd.altValue);
     } else if (buttonPressed()) {
-        setState(this->state + 1);
+        updateState(this->state + 1, 0);
     }
 } 
 
 
 
 
-/*
- * the reason I put all of the states as separate functions
- * instead of just using an enum is so that we can 
- * very easily move from the milestone to actually doing
- * things for each state, so now we could just fill in
- * whatever state with the behavior it needs
- */
-
 //               PIN          RED     GREEN  BLUE
-// neopixelWrite(RGB_BUILTIN, BRIGHT, 0,     0);
-void FSM::stateIdle() {
+// rgbLedWrite(RGB_BUILTIN, BRIGHT, 0,     0);
+void FSM::stateStop() {
     checkCommandUpdate();
     Serial.println("In Idle state :)");
-    neopixelWrite(RGB_BUILTIN, BRIGHT, 0, 0);
+    rgbLedWrite(RGB_BUILTIN, BRIGHT, 0, 0);
+    ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_brake(&left_motor));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_brake(&right_motor));
     delay(1000);
 }
 
-void FSM::stateOne() {
+void FSM::stateForward() {
     checkCommandUpdate();
     Serial.println("In state one");
-    neopixelWrite(RGB_BUILTIN, 0, BRIGHT, 0);
+    rgbLedWrite(RGB_BUILTIN, 0, BRIGHT, 0);
+    ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_forward(&left_motor));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_forward(&right_motor));
     delay(1000);
 }
 
-void FSM::stateTwo() {
+void FSM::stateBackward() {
     checkCommandUpdate();
     Serial.println("In state two");
-    neopixelWrite(RGB_BUILTIN, 0, 0, BRIGHT);
+    rgbLedWrite(RGB_BUILTIN, 0, 0, BRIGHT); 
+    ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_reverse(&left_motor));
+    ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_reverse(&right_motor));
     delay(1000);
 }
 
-void FSM::stateThree() {
+void FSM::statePivotCW() {
     checkCommandUpdate();
     Serial.println("In state three");
-    neopixelWrite(RGB_BUILTIN, BRIGHT, BRIGHT, 0);
+    rgbLedWrite(RGB_BUILTIN, BRIGHT, BRIGHT, 0);
     delay(1000);
 }
 
-void FSM::stateFour() {
+void FSM::statePivotCCW() {
     checkCommandUpdate();
     Serial.println("In state four");
-    neopixelWrite(RGB_BUILTIN, BRIGHT, 0, BRIGHT);
+    rgbLedWrite(RGB_BUILTIN, BRIGHT, 0, BRIGHT);
     delay(1000);
 }
 
-void FSM::stateFive() {
+void FSM::stateRightTurn() {
     checkCommandUpdate();
     Serial.println("In state five");
-    neopixelWrite(RGB_BUILTIN, 0, BRIGHT, BRIGHT);
+    rgbLedWrite(RGB_BUILTIN, 0, BRIGHT, BRIGHT);
     delay(1000);
 }
 
-void FSM::stateSix() {
+void FSM::stateLeftTurn() {
     checkCommandUpdate();
     Serial.println("In state six");
-    neopixelWrite(RGB_BUILTIN, BRIGHT, BRIGHT, BRIGHT);
+    rgbLedWrite(RGB_BUILTIN, BRIGHT, BRIGHT, BRIGHT);
     delay(1000);
 }
 

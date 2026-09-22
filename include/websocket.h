@@ -1,29 +1,16 @@
 #pragma once
 #include <WebSocketsClient.h>
 
-enum class CommandType : uint8_t {
-    NONE,
-    SET_STATE,
-    SET_MOTOR,
-};
 
 /* Command
  *
- * type:  what flavor of command
  * value: integer value of command (state number, motion, etc)
+ * altValue: secondary value ***
  */
 struct Command {
-    CommandType type = CommandType::NONE;
     uint32_t value = 0;
     uint32_t altValue = 0;
 };
-
-/* commandTypeToString
- *
- * Does what it says on the box
- * For debugging purposes
- */
-const char* commandTypeToString(CommandType type);
 
 /* websocketInit
  *
@@ -53,19 +40,15 @@ bool getCommand(Command& outCmd);
 
 /* Communication over the websocket:
  *
- *  BOTH CAN BE SIMPLIFIED TO ONE UNIT, KEEP STATE CHANGE, USE SECONDARY FIELD
- *  
- *
  * All of our packets are prefixed with CLIENT_ID (MAGICSMOKE67), followed 
  * by a space and then a command string. For example, a valid command is:
  *
- *              'MAGICSMOKE67 set: STATE=1'
+ *              'MAGICSMOKE67 set: STATE=1,30'
  *
  * STATE VALUES:
  *  value in packet represents state of machine (0-6), values outside
  *  are undefined by the websocket
  *
- * MOTOR VALUES:
  *  0 => Stop
  *  1 => Both motors forward
  *  2 => Both motors backward
@@ -74,11 +57,11 @@ bool getCommand(Command& outCmd);
  *  5 => Right turn at radius r
  *  6 => Left turn at radius r
  *
- *              'MAGICSMOKE67 set: MOTOR =1,50'
+ *              'MAGICSMOKE67 set: STATE=1,50'
  *
  *  For motor commands with no secondary argument, use X to fill null
  *
- *              'MAGICSMOKE67 set: MOTOR =0,X'
+ *              'MAGICSMOKE67 set: STATE=0,X'
  */
 
 // ===================================================================

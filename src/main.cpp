@@ -29,9 +29,8 @@ void loop() {
     // Serial.print("Right: ");
     // Serial.print(right_encoder_count());
     // Serial.println("");
-    delay(100);
 
-    // fsm.tick();
+    fsm.tick();
     // bool ret = getCommand(command);
     // if (ret) {
     //     Serial.println("New Command:");
@@ -40,6 +39,6 @@ void loop() {
     //     Serial.print("value: ");
     //     Serial.println(command.value);
     // }
-    // delay(1000); 
+    delay(1000); 
 }
 
