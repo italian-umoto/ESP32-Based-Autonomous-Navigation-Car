@@ -33,5 +33,6 @@ class FSM {
 
         // 7 is set in canvas assignment
         uint32_t state = 0;
+        uint32_t cmd_value = 0;
         static constexpr int numStates = 7;
 };

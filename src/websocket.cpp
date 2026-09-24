@@ -38,21 +38,29 @@ bool getCommand(Command& outCmd) {
     return false;
 }
 
+static bool parseInt32(const char *s, const char *end, int32_t *out) {
+    char *stop;
+    long v = strtol(s, &stop, 10);
+    if (stop == s || stop != end) return false;
+    *out = (int32_t)v;
+    return true;
+}
+
 static void parseAndStore(const String& message) {
-    int eq = message.indexOf('=');
-    int comma = message.indexOf(',');
+    const String prefix = String(CLIENT_ID) + " set: STATE=";
+    if (!message.startsWith(prefix)) return;
 
-    String statePrefix = String(CLIENT_ID) + " set: STATE";
+    const char *body  = message.c_str() + prefix.length();
+    const char *comma = strchr(body, ',');
+    if (!comma) return;
 
-    if (message.startsWith(statePrefix) && eq != -1 && comma != -1) {
-        int32_t value = message.substring(eq + 1, eq + 1).toInt();
-        int32_t altValue = message.substring(comma + 1).toInt();
+    int32_t x, y;
+    if (!parseInt32(body, comma, &x)) return;
+    if (!parseInt32(comma + 1, body + strlen(body), &y)) return;
 
-        pending_value = value;
-        secondary_value = altValue;
-        command_available = true;
-    }
-    // elif here to add more commands
+    pending_value     = x;
+    secondary_value   = y;
+    command_available = true;
 }
 
 // Extracted from starter code loop fn
