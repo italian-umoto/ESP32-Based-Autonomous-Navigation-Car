@@ -2,7 +2,6 @@
 
 const int IR_LED_PIN = 5;
 const int SENSOR_PIN = 4;
-
 const int COLLISION_THRESHOLD = 900;
 const int NUM_SAMPLES = 4;
 
@@ -31,17 +30,14 @@ void setup() {
 void loop() {
     digitalWrite(IR_LED_PIN, LOW);
     delayMicroseconds(300);
-    int background1 = readAverage();
+    int background = readAverage();
     
     digitalWrite(IR_LED_PIN, HIGH);
     delayMicroseconds(300);
     int illuminated = readAverage();
     
     digitalWrite(IR_LED_PIN, LOW);
-    delayMicroseconds(300);
-    int background2 = readAverage();
     
-    int background = (background1 + background2) / 2;
     int reflected = illuminated - background;
     bool imminent_collision = false;
     if (reflected > COLLISION_THRESHOLD) imminent_collision = true;
