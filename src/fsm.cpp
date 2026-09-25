@@ -1,16 +1,14 @@
-#include "fsm.h"
 #include <stdint.h>
 #include <Arduino.h> 
 #include "websocket.h"
-#include "motors.h"
-
-
-static const char *TAG = "MOTOR";
+#include "drive.h"
+#include "fsm.h"
 
 #define STATE_INDICATOR_LED 38
 #define BRIGHT 64
 #define STATE_TRANSITION_PIN 5
 #define DEBOUNCE_DELAY 1
+#define NUM_STATES 7
 
 
 static bool buttonPressed() {
@@ -49,7 +47,7 @@ void FSM::tick() {
 void FSM::updateState(int32_t state, int32_t value) {
     Serial.printf("updateState(%ld, %ld) from state %ld\n",
                   (long)state, (long)value, (long)this->state);
-    if (state < 0 || state >= numStates) {
+    if (state < 0 || state >= NUM_STATES) {
         Serial.print("Invalid state: ");
         Serial.println(state);
         return;
@@ -69,62 +67,66 @@ void FSM::checkCommandUpdate() {
 } 
 
 
-
-
-//               PIN          RED     GREEN  BLUE
-// rgbLedWrite(RGB_BUILTIN, BRIGHT, 0,     0);
+//                     PIN     RED    GREEN   BLUE
+// rgbLedWrite(RGB_BUILTIN, BRIGHT,       0,     0);
 void FSM::stateStop() {
     checkCommandUpdate();
-    Serial.println("In Idle state :)");
+    Serial.println("State: Stopped");
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, 0, 0);
-    //ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_brake(&left_motor));
-    //ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_brake(&right_motor));
+    drive_stop();
     delay(10);
 }
 
 void FSM::stateForward() {
     checkCommandUpdate();
-    Serial.println("In state one");
+    Serial.println("State: Forward");
     rgbLedWrite(STATE_INDICATOR_LED, 0, BRIGHT, 0);
-    //ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_forward(&left_motor));
-    //ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_forward(&right_motor));
+    drive_forward(this->cmd_value);
     delay(10);
 }
 
 void FSM::stateBackward() {
     checkCommandUpdate();
-    Serial.println("In state two");
+    Serial.println("State: Backward");
+    Serial.printf("Speed: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, 0, 0, BRIGHT); 
-    //ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_reverse(&left_motor));
-    //ESP_ERROR_CHECK_WITHOUT_ABORT(bdc_motor_reverse(&right_motor));
+    drive_backward(this->cmd_value);
     delay(10);
 }
 
 void FSM::statePivotCW() {
     checkCommandUpdate();
-    Serial.println("In state three");
+    Serial.println("State: Pivot CW");
+    Serial.printf("Speed: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, BRIGHT, 0);
+    drive_pivot_cw(this->cmd_value);
     delay(10);
 }
 
 void FSM::statePivotCCW() {
     checkCommandUpdate();
-    Serial.println("In state four");
+    Serial.println("State: Pivot CW");
+    Serial.printf("Speed: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, 0, BRIGHT);
+    drive_pivot_ccw(this->cmd_value);
     delay(10);
 }
 
 void FSM::stateRightTurn() {
     checkCommandUpdate();
-    Serial.println("In state five");
+    Serial.println("State: Right Turn");
+    Serial.printf("Radius: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, 0, BRIGHT, BRIGHT);
+    drive_turn_right(this->cmd_value);
     delay(10);
 }
 
 void FSM::stateLeftTurn() {
     checkCommandUpdate();
-    Serial.println("In state six");
+    Serial.println("State: Left Turn");
+    Serial.printf("Radius: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, BRIGHT, BRIGHT);
+    drive_turn_left(this->cmd_value);
     delay(10);
 }
 

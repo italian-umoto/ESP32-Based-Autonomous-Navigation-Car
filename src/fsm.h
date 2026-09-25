@@ -1,10 +1,21 @@
 #pragma once
 #include <stdint.h>
-#include "esp_err.h"
 
+/* Our sick and cool state machine class
+ *
+ * Each state is associated with a movement (see states below)
+ * States can change via websocket command or on-breadboard button press
+ */
 class FSM {
     public:
+        /* tick
+         * calls state method according to this->currentState
+         */
         void tick();
+
+        /* FSM
+         * sets pin for the fun rgbled state identifier
+         */
         FSM();
 
     private:
@@ -31,8 +42,17 @@ class FSM {
             &FSM::stateLeftTurn,
         };
 
-        // 7 is set in canvas assignment
+        // Current state
+        // 0: Stop 
+        // 1: Forward 
+        // 2: Backward 
+        // 3: Pivot CW 
+        // 4: Pivot CCW 
+        // 5: Right Turn 
+        // 6: Left Turn
         uint32_t state = 0;
+
+        // Value given after comma in websocket command 
+        // (either speed or radius dependent on state)
         uint32_t cmd_value = 0;
-        static constexpr int numStates = 7;
 };

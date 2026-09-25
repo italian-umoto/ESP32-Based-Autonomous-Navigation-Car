@@ -17,13 +17,12 @@
 #include "motors.h"
 #include "motor_calibration.h"
 #include <Arduino.h>
-#include <Arduino.h>
 
 static const char *TAG = "MOTOR";
 
 // GPIO Pins (L293D inputs M1/M2, quadrature encoder channels A/B)
 #define LEFT_M1                       21
-#define LEFT_M2                       38
+#define LEFT_M2                       4  // LARRY I changed this ****
 #define LEFT_A                        41
 #define LEFT_B                        42
 #define RIGHT_M1                      39
@@ -75,6 +74,16 @@ motor_control_context_t left_motor_ctrl_ctx;
 bdc_motor_t right_motor;
 pid_ctrl_t right_pid_ctrl;
 motor_control_context_t right_motor_ctrl_ctx;
+
+
+// This is what the fsm can touch to talk to pid
+static portMUX_TYPE cmd_mux = portMUX_INITIALIZER_UNLOCKED;
+static struct {
+    bool  pending;
+    bool  stop;
+    float left_cps;
+    float right_cps;
+} cmd_box = { false, true, 0.0f, 0.0f };
 
 static esp_err_t bdc_motor_new_mcpwm_device(bdc_motor_t *motor, int group_id, uint32_t resolution_hz, uint32_t pwm_freq_hz, int pwma_gpio_num, int pwmb_gpio_num)
 {
@@ -199,8 +208,61 @@ static float pid_compute(pid_ctrl_t *pid, float error)
     return output;
 }
 
+static void pid_reset(pid_ctrl_t *pid, int encoder_count)
+{
+    pid->previous_err1      = 0.0f;
+    pid->previous_err2      = 0.0f;
+    pid->last_output        = 0.0f;
+    pid->last_encoder_count = encoder_count;
+}
+
+static int signf(float x) { return (x > 0) - (x < 0); }
+
+static void apply_wheel(pid_ctrl_t *pid, int (*count_fn)(), float setpoint)
+{
+    if (!pid->enabled || signf(setpoint) != signf(pid->setpoint)) {
+        pid_reset(pid, count_fn());
+        pid->enabled = true;
+    }
+    pid->setpoint = setpoint;
+}
+
+
+
+static void do_stop(void)
+{
+    left_pid_ctrl.enabled  = false;
+    right_pid_ctrl.enabled = false;
+    left_pid_ctrl.setpoint  = 0.0f;
+    right_pid_ctrl.setpoint = 0.0f;
+    bdc_motor_brake(&left_motor);    // or bdc_motor_coast()
+    bdc_motor_brake(&right_motor);
+}
+
 static void pid_loop_cb(void *args) // args ignored
 {
+    // reads our fsm interface here and is muxed for safety :)
+    bool pending, stop;
+    float l, r;
+    portENTER_CRITICAL(&cmd_mux);
+    pending = cmd_box.pending;
+    stop    = cmd_box.stop;
+    l       = cmd_box.left_cps;
+    r       = cmd_box.right_cps;
+    cmd_box.pending = false;
+    portEXIT_CRITICAL(&cmd_mux);
+
+    if (pending) {
+        if (stop) {
+            do_stop();
+            return;
+        }
+        apply_wheel(&left_pid_ctrl,  left_encoder_count,  l);
+        apply_wheel(&right_pid_ctrl, right_encoder_count, r);
+    }
+
+
+
     if(left_pid_ctrl.enabled) {
         int next_left_count = left_encoder_count();
         int count_delta = next_left_count - left_pid_ctrl.last_encoder_count;
@@ -224,6 +286,27 @@ static void pid_loop_cb(void *args) // args ignored
     }
     
 }
+
+
+void motors_command(float left_cps, float right_cps)
+{
+    portENTER_CRITICAL(&cmd_mux);
+    cmd_box.left_cps  = left_cps;
+    cmd_box.right_cps = right_cps;
+    cmd_box.stop      = false;
+    cmd_box.pending   = true;
+    portEXIT_CRITICAL(&cmd_mux);
+}
+
+void motors_stop(void)
+{
+    portENTER_CRITICAL(&cmd_mux);
+    cmd_box.stop    = true;
+    cmd_box.pending = true;
+    portEXIT_CRITICAL(&cmd_mux);
+}
+
+
 
 void print_pid_debug() {
     Serial.printf("L: en=%d set=%.0f cps=%.0f err=%.0f fb=%.1f count=%d\n",
@@ -287,8 +370,8 @@ void create_one_motor_with_encoder(bdc_motor_t * motor, motor_control_context_t 
 
     ESP_LOGI(TAG, "Enable motor");
     ESP_ERROR_CHECK(bdc_motor_enable(motor));
-    ESP_LOGI(TAG, "Forward motor");
-    ESP_ERROR_CHECK(bdc_motor_forward(motor));
+    ESP_LOGI(TAG, "Starting at brake");
+    ESP_ERROR_CHECK(bdc_motor_brake(motor)); 
 }
 
 
@@ -296,8 +379,8 @@ void create_one_motor_with_encoder(bdc_motor_t * motor, motor_control_context_t 
 
 
 void setup_motors() {
-    create_one_motor_with_encoder(&left_motor,  &left_motor_ctrl_ctx,  0, LEFT_M1,  LEFT_M2,  LEFT_A,  LEFT_B);
-    create_one_motor_with_encoder(&right_motor, &right_motor_ctrl_ctx, 1, RIGHT_M1, RIGHT_M2, RIGHT_A, RIGHT_B);
+    create_one_motor_with_encoder(&left_motor,  &left_motor_ctrl_ctx,  0, RIGHT_M1, RIGHT_M2, RIGHT_A, RIGHT_B);
+    create_one_motor_with_encoder(&right_motor, &right_motor_ctrl_ctx, 1, LEFT_M1,  LEFT_M2,  LEFT_A,  LEFT_B);
 
     
     // setup single shared PID  loop
@@ -314,11 +397,6 @@ void setup_motors() {
     ESP_ERROR_CHECK(esp_timer_start_periodic(pid_loop_timer, BDC_PID_LOOP_PERIOD_MS * 1000));
 }
 
-
-
-void loop_motors() {
-
-}
 
 
 int left_encoder_count() {
@@ -357,21 +435,24 @@ void right_set_signed_speed (int speed) {
     }
 }
 
-void enable_pid() {
-    left_pid_ctrl.last_encoder_count = left_encoder_count();
-    right_pid_ctrl.last_encoder_count = right_encoder_count();
 
-    left_pid_ctrl.enabled = true;
-    right_pid_ctrl.enabled = true;
-}
+// I took these out for now because the speed will be covered by drive component
+
+//void enable_pid() {
+//    left_pid_ctrl.last_encoder_count = left_encoder_count();
+//    right_pid_ctrl.last_encoder_count = right_encoder_count();
+//
+//    left_pid_ctrl.enabled = true;
+//    right_pid_ctrl.enabled = true;
+//}
 
 
-void left_set_speed_pid(int speed){
-    if(!left_pid_ctrl.enabled) enable_pid();
-    left_pid_ctrl.setpoint=speed;   
-}
+//void left_set_speed_pid(int speed){
+//    if(!left_pid_ctrl.enabled) enable_pid();
+//    left_pid_ctrl.setpoint=speed;   
+//}
 
-void right_set_speed_pid(int speed){
-    if(!right_pid_ctrl.enabled) enable_pid();
-    right_pid_ctrl.setpoint=speed;
-}
+//void right_set_speed_pid(int speed){
+//    if(!right_pid_ctrl.enabled) enable_pid();
+//    right_pid_ctrl.setpoint=speed;
+//}
