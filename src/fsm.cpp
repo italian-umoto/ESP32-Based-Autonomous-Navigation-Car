@@ -41,6 +41,7 @@ FSM::FSM() {
 }
 
 void FSM::tick() {
+    checkCommandUpdate();
     (this->*currentState)();
 }
 
@@ -70,7 +71,6 @@ void FSM::checkCommandUpdate() {
 //                     PIN     RED    GREEN   BLUE
 // rgbLedWrite(RGB_BUILTIN, BRIGHT,       0,     0);
 void FSM::stateStop() {
-    checkCommandUpdate();
     Serial.println("State: Stopped");
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, 0, 0);
     drive_stop();
@@ -78,7 +78,6 @@ void FSM::stateStop() {
 }
 
 void FSM::stateForward() {
-    checkCommandUpdate();
     Serial.println("State: Forward");
     rgbLedWrite(STATE_INDICATOR_LED, 0, BRIGHT, 0);
     drive_forward(this->cmd_value);
@@ -86,7 +85,6 @@ void FSM::stateForward() {
 }
 
 void FSM::stateBackward() {
-    checkCommandUpdate();
     Serial.println("State: Backward");
     Serial.printf("Speed: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, 0, 0, BRIGHT); 
@@ -95,7 +93,6 @@ void FSM::stateBackward() {
 }
 
 void FSM::statePivotCW() {
-    checkCommandUpdate();
     Serial.println("State: Pivot CW");
     Serial.printf("Speed: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, BRIGHT, 0);
@@ -104,7 +101,6 @@ void FSM::statePivotCW() {
 }
 
 void FSM::statePivotCCW() {
-    checkCommandUpdate();
     Serial.println("State: Pivot CW");
     Serial.printf("Speed: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, 0, BRIGHT);
@@ -113,7 +109,6 @@ void FSM::statePivotCCW() {
 }
 
 void FSM::stateRightTurn() {
-    checkCommandUpdate();
     Serial.println("State: Right Turn");
     Serial.printf("Radius: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, 0, BRIGHT, BRIGHT);
@@ -122,7 +117,6 @@ void FSM::stateRightTurn() {
 }
 
 void FSM::stateLeftTurn() {
-    checkCommandUpdate();
     Serial.println("State: Left Turn");
     Serial.printf("Radius: %d\n", this->cmd_value);
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, BRIGHT, BRIGHT);

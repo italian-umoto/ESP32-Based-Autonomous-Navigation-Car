@@ -85,7 +85,7 @@ static void parseAndStore(const String& message) {
 static void websocketTask(void * pvParameters) {
     for (;;) {
         webSocket.loop();
-        runScript();
+        //runScript();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }

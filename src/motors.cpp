@@ -246,9 +246,9 @@ static void pid_loop_cb(void *args) // args ignored
     float l, r;
     portENTER_CRITICAL(&cmd_mux);
     pending = cmd_box.pending;
-    stop    = cmd_box.stop;
-    l       = cmd_box.left_cps;
-    r       = cmd_box.right_cps;
+    stop = cmd_box.stop;
+    l = cmd_box.left_cps;
+    r = cmd_box.right_cps;
     cmd_box.pending = false;
     portEXIT_CRITICAL(&cmd_mux);
 
