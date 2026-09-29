@@ -1,10 +1,11 @@
 #include <WiFi.h>
 #include "websocket.h"
-#include <websocket_secrets.h>
+#include "websocket_secrets.h"
+#include <ArduinoJson.h>
 
 // SERVER CONSTANTS
-//const char* SERVER_IP = "10.5.9.24"; // Tufts WS IP
-const char* SERVER_IP = "10.0.0.95"; // AJ laptop IP
+const char* SERVER_IP = "10.5.9.24"; // Tufts WS IP
+//const char* SERVER_IP = "10.0.0.95"; // AJ laptop IP
 const uint16_t SERVER_PORT = 80;
 const char* SERVER_PATH = "/ws";
 const char* CLIENT_ID = "MAGICSMOKE67";
@@ -17,6 +18,9 @@ TaskHandle_t WebTask;
 WebSocketsClient webSocket;
 bool authenticated = false;
 unsigned long lastSendTime = 0;
+
+// uh oh
+static void runScript();
 
 
 // These 3 *need* to be volatile for atomic writes?
@@ -46,20 +50,32 @@ static bool parseInt32(const char *s, const char *end, int32_t *out) {
     return true;
 }
 
-static void parseAndStore(const String& message) {
+static bool parseCommand(const char *cmd, int32_t *x, int32_t *y) {
     const String prefix = String(CLIENT_ID) + " set: STATE=";
-    if (!message.startsWith(prefix)) return;
+    if (strncmp(cmd, prefix.c_str(), prefix.length()) != 0) return false;
 
-    const char *body  = message.c_str() + prefix.length();
+    const char *body  = cmd + prefix.length();
     const char *comma = strchr(body, ',');
-    if (!comma) return;
+    if (!comma) return false;
+
+    return parseInt32(body, comma, x) &&
+           parseInt32(comma + 1, body + strlen(body), y);
+}
+
+static void parseAndStore(const String& message) {
+    JsonDocument doc;
+    if (deserializeJson(doc, message)) return; 
+
+    // The check that from contains server is probably not necessary
+    const char *from = doc["from"];
+    const char *echo = doc["echo"];
+    if (!from || !echo || strcmp(from, "server") != 0) return;
 
     int32_t x, y;
-    if (!parseInt32(body, comma, &x)) return;
-    if (!parseInt32(comma + 1, body + strlen(body), &y)) return;
+    if (!parseCommand(echo, &x, &y)) return;
 
-    pending_value     = x;
-    secondary_value   = y;
+    pending_value = x;
+    secondary_value = y;
     command_available = true;
 }
 
@@ -69,6 +85,7 @@ static void parseAndStore(const String& message) {
 static void websocketTask(void * pvParameters) {
     for (;;) {
         webSocket.loop();
+        runScript();
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
@@ -157,4 +174,47 @@ void websocketInit() {
     &WebTask,        
     0                // Core #
   );
+}
+
+
+
+/* Tentative sending code
+ * You can fill SCRIPT with whatever commands you want
+ * in the form STATE, ARG, DELAY 
+ * where delay is time in ms until next send
+ *
+ * Setting script_enabled = true enables the script at compile time
+ */
+struct ScriptStep {
+    int32_t  state;
+    int32_t  arg;
+    uint32_t hold_ms;
+};
+
+static const ScriptStep SCRIPT[] = {
+    {1, 300, 2000},
+    {4, 200, 3000},
+    {1, 300, 2000},
+    {3, 200, 3000},
+    {0,   0, 10000},
+};
+static constexpr size_t SCRIPT_LEN = sizeof(SCRIPT) / sizeof(SCRIPT[0]);
+
+static bool script_enabled = false;
+static size_t script_idx = 0;
+static unsigned long next_send_at = 0;
+
+static void runScript() {
+    if (!script_enabled || !authenticated) return;
+    if ((long)(millis() - next_send_at) < 0) return;
+
+    const ScriptStep &s = SCRIPT[script_idx];
+    char buf[64];
+    snprintf(buf, sizeof buf, "%s set: STATE=%ld,%ld",
+             CLIENT_ID, (long)s.state, (long)s.arg);
+    webSocket.sendTXT(buf);
+    Serial.printf("Sent: %s\n", buf);
+
+    next_send_at = millis() + s.hold_ms;
+    script_idx = (script_idx + 1) % SCRIPT_LEN;
 }
