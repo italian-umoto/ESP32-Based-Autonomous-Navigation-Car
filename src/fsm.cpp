@@ -7,7 +7,7 @@
 #define STATE_INDICATOR_LED 38
 #define BRIGHT 64
 #define STATE_TRANSITION_PIN 5
-#define DEBOUNCE_DELAY 1
+#define DEBOUNCE_DELAY 10
 #define NUM_STATES 7
 
 
@@ -68,8 +68,6 @@ void FSM::checkCommandUpdate() {
 } 
 
 
-//                     PIN     RED    GREEN   BLUE
-// rgbLedWrite(RGB_BUILTIN, BRIGHT,       0,     0);
 void FSM::stateStop() {
     Serial.println("State: Stopped");
     rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, 0, 0);

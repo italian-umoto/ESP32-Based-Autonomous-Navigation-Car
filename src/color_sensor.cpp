@@ -1,30 +1,32 @@
-#include "Arduino.h"
+#include "color_sensor.h"
+#include <Arduino.h>
 
-constexpr int SENSOR_PIN = 4;
-constexpr int RED_LED_PIN = 5;
-constexpr int GREEN_LED_PIN = 6;
-constexpr int BLUE_LED_PIN = 7;
+constexpr int SENSOR_PIN = 16;
+constexpr int RED_LED_PIN = 6;
+constexpr int GREEN_LED_PIN = 7;
+constexpr int BLUE_LED_PIN = 15;
 
 constexpr int NUM_SAMPLES = 16;
 constexpr int DARK_THRESHOLD = 10;
+constexpr int WHITE_THRESHOLD = 150;
 constexpr float COLOR_DOMINANCE = 1.25f;
 
 constexpr int LED_SETTLE_MS = 10;
 constexpr int BETWEEN_READINGS_MS = 10;
 
-struct colorReading{
-    int red;
-    int green;
-    int blue;
-};
+void colorInit() {
+    pinMode(RED_LED_PIN, OUTPUT);
+    pinMode(GREEN_LED_PIN, OUTPUT);
+    pinMode(BLUE_LED_PIN, OUTPUT);
 
-enum class DetectedColor{
-    Dark,
-    Red,
-    Yellow,
-    Blue,
-    White
-};
+    resetLED();
+
+    // ADC range: 0-4095
+    analogReadResolution(12);
+
+    // Allow measurement of higher input voltages.
+    analogSetPinAttenuation(SENSOR_PIN, ADC_11db);
+}
 
 void resetLED() {
     digitalWrite(RED_LED_PIN, LOW);
@@ -91,12 +93,13 @@ DetectedColor classifyColor(const colorReading& reading) {
         reading.red > reading.blue * COLOR_DOMINANCE &&
         reading.green > reading.blue * COLOR_DOMINANCE;
 
-    if (red && !yellow) return DetectedColor::Red;
+    if (red) return DetectedColor::Red;
     if (yellow) return DetectedColor::Yellow;
     if (blue) return DetectedColor::Blue;
-
-    return DetectedColor::White;
-};
+    if (brightest > WHITE_THRESHOLD) return DetectedColor::White;
+    //Dark returned as default
+    return DetectedColor::Dark;
+}
 
 const char* colorToString(DetectedColor color) {
     switch (color) {
@@ -124,29 +127,3 @@ void printReading(const colorReading& reading, DetectedColor color) {
     Serial.println(colorToString(color));
 };
 
-void setup() {
-    Serial.begin(115200);
-
-    pinMode(RED_LED_PIN, OUTPUT);
-    pinMode(GREEN_LED_PIN, OUTPUT);
-    pinMode(BLUE_LED_PIN, OUTPUT);
-
-    resetLED();
-
-    // ADC range: 0-4095
-    analogReadResolution(12);
-
-    // Allow measurement of higher input voltages.
-    analogSetPinAttenuation(SENSOR_PIN, ADC_11db);
-
-    delay(1000);
-};
-
-void loop() {
-    const colorReading reading = single_read();
-    const DetectedColor color = classifyColor(reading);
-
-    printReading(reading, color);
-
-    delay(100);
-}
