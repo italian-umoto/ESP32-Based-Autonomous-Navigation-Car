@@ -1,68 +1,152 @@
-#include <Arduino.h>
+#include "Arduino.h"
 
 constexpr int SENSOR_PIN = 4;
 constexpr int RED_LED_PIN = 5;
 constexpr int GREEN_LED_PIN = 6;
 constexpr int BLUE_LED_PIN = 7;
+
 constexpr int NUM_SAMPLES = 16;
-constexpr int DARK_THRESHOLD = 30;
-constexpr float COLOR_DOMINANCE = 1.25f; // color winner margin
-constexpr int DELAY_MS = 10;
+constexpr int DARK_THRESHOLD = 10;
+constexpr float COLOR_DOMINANCE = 1.25f;
+
+constexpr int LED_SETTLE_MS = 10;
+constexpr int BETWEEN_READINGS_MS = 10;
+
+struct colorReading{
+    int red;
+    int green;
+    int blue;
+};
+
+enum class DetectedColor{
+    Dark,
+    Red,
+    Yellow,
+    Blue,
+    White
+};
+
+void resetLED() {
+    digitalWrite(RED_LED_PIN, LOW);
+    digitalWrite(GREEN_LED_PIN, LOW);
+    digitalWrite(BLUE_LED_PIN, LOW);
+};
 
 int readAverage() {
     long total = 0;
-    for (int i = 0; i < NUM_SAMPLES; ++i) {
+
+    for (int i = 0; i < NUM_SAMPLES; i++) {
         total += analogRead(SENSOR_PIN);
         delayMicroseconds(100);
     }
-    return total / NUM_SAMPLES;
-}
 
-// Sets one of R/G/B high and gets the reading minus the ambient light
+    return total / NUM_SAMPLES;
+};
+
 int readReflection(int ledPin, int ambient) {
     digitalWrite(ledPin, HIGH);
-    delay(DELAY_MS);
+    delay(LED_SETTLE_MS);
+
     const int illuminated = readAverage();
+
     digitalWrite(ledPin, LOW);
+
     return max(0, illuminated - ambient);
+};
+
+colorReading single_read () {
+
+    resetLED();
+
+    const int ambient = readAverage();
+
+    const int red = readReflection(RED_LED_PIN, ambient);
+    delay(BETWEEN_READINGS_MS);
+    
+    const int green = readReflection(GREEN_LED_PIN, ambient);
+    delay(BETWEEN_READINGS_MS);
+
+    const int blue = readReflection(BLUE_LED_PIN, ambient);
+    delay(BETWEEN_READINGS_MS);
+
+
+    return {red, green, blue};
 }
+
+// Main color detection logic
+DetectedColor classifyColor(const colorReading& reading) {
+    
+    const int brightest = max(reading.red, max(reading.green, reading.blue));
+
+    if (brightest < DARK_THRESHOLD) return DetectedColor::Dark;
+
+    const bool red =
+        reading.red  > 10 && reading.blue < 10 && reading.green < 10;
+
+    const bool blue =
+        reading.blue > reading.red * COLOR_DOMINANCE &&
+        reading.blue > reading.green * COLOR_DOMINANCE;
+
+    const bool yellow =
+        reading.red > reading.blue * COLOR_DOMINANCE &&
+        reading.green > reading.blue * COLOR_DOMINANCE;
+
+    if (red && !yellow) return DetectedColor::Red;
+    if (yellow) return DetectedColor::Yellow;
+    if (blue) return DetectedColor::Blue;
+
+    return DetectedColor::White;
+};
+
+const char* colorToString(DetectedColor color) {
+    switch (color) {
+        case DetectedColor::Dark: return "Dark";
+        case DetectedColor::Red: return "Red";
+        case DetectedColor::Yellow: return "Yellow";
+        case DetectedColor::Blue: return "Blue";
+        case DetectedColor::White: return "White";
+    }
+
+    return "Unknown";
+};
+
+void printReading(const colorReading& reading, DetectedColor color) {
+    Serial.print("R: ");
+    Serial.print(reading.red);
+
+    Serial.print("  G: ");
+    Serial.print(reading.green);
+
+    Serial.print("  B: ");
+    Serial.print(reading.blue);
+
+    Serial.print("  color: ");
+    Serial.println(colorToString(color));
+};
 
 void setup() {
     Serial.begin(115200);
+
     pinMode(RED_LED_PIN, OUTPUT);
     pinMode(GREEN_LED_PIN, OUTPUT);
     pinMode(BLUE_LED_PIN, OUTPUT);
 
-    // return values between 0 and 4095
+    resetLED();
+
+    // ADC range: 0-4095
     analogReadResolution(12);
 
-    // configure ADC to measure higher voltages
+    // Allow measurement of higher input voltages.
     analogSetPinAttenuation(SENSOR_PIN, ADC_11db);
+
     delay(1000);
-}
+};
 
 void loop() {
-    digitalWrite(RED_LED_PIN, LOW);
-    digitalWrite(GREEN_LED_PIN, LOW);
-    digitalWrite(BLUE_LED_PIN, LOW);
+    const colorReading reading = single_read();
+    const DetectedColor color = classifyColor(reading);
 
-    const int ambient = readAverage();
-    delay(100);
-    const int red = readReflection(RED_LED_PIN, ambient);
-    delay(100);
-    const int green = readReflection(GREEN_LED_PIN, ambient);
-    delay(100);
-    const int blue = readReflection(BLUE_LED_PIN, ambient);
+    printReading(reading, color);
 
-    const int brightest = max(red, max(green, blue));
-    const char* color = "white";
-    if (brightest < DARK_THRESHOLD) color = "dark";
-    else if (red > green * COLOR_DOMINANCE && red > blue * COLOR_DOMINANCE) color = "red";
-    else if (green > blue * COLOR_DOMINANCE && red > blue * COLOR_DOMINANCE) color = "yellow";
-    else if (blue > red * COLOR_DOMINANCE && blue > green * COLOR_DOMINANCE) color = "blue";
-    Serial.print("R: "); Serial.print(red);
-    Serial.print("  G: "); Serial.print(green);
-    Serial.print("  B: "); Serial.print(blue);
-    Serial.print("  color: "); Serial.println(color);
     delay(100);
 }
