@@ -35,7 +35,7 @@ void drive_pivot_ccw(float speed) { speed = fabsf(speed); drive_wheels(-speed,  
 // https://introtoroboticsv2.readthedocs.io/en/latest/course/driving/differential_steering.html
 static void drive_arc(float speed, float radius_mm, bool right)
 {
-    speed     = fabsf(speed);
+    speed = fabsf(speed);
     radius_mm = fabsf(radius_mm);
 
     if (radius_mm < 1.0f) {
