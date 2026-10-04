@@ -5,7 +5,7 @@
 #define LEFT_WHEEL_DIR   -1
 #define RIGHT_WHEEL_DIR  1
 
-#define DRIVE_TURN_SPEED 200
+#define DRIVE_TURN_SPEED 1000
 
 // Scale down the inputs to clamp in the max CPS
 static void drive_wheels(float left_cps, float right_cps)
