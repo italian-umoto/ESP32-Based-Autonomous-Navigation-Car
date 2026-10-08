@@ -1,8 +1,7 @@
 #include "collision.h"
+#include "pins.h"
 #include <Arduino.h>
 
-static const int IR_LED_PIN = 5;
-static const int SENSOR_PIN = 4;
 static const int COLLISION_THRESHOLD = 900;
 static const int NUM_SAMPLES = 4;
 
@@ -10,7 +9,7 @@ static int readAverageCollison() {
     long sum = 0;
 
     for (int i = 0; i < NUM_SAMPLES; i++) {
-        sum += analogRead(SENSOR_PIN);
+        sum += analogRead(COLLISION_SENSOR_PIN);
     }
 
     return sum / NUM_SAMPLES;
@@ -21,7 +20,7 @@ void setupCollisionDetection() {
     digitalWrite(IR_LED_PIN, LOW);
 
     analogReadResolution(12);
-    analogSetPinAttenuation(SENSOR_PIN, ADC_11db);
+    analogSetPinAttenuation(COLLISION_SENSOR_PIN, ADC_11db);
 }
 
 CollisionReading readCollisionDetection() {

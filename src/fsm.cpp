@@ -1,12 +1,12 @@
 #include <stdint.h>
 #include <Arduino.h> 
 #include "websocket.h"
+#include "collision.h"
 #include "drive.h"
 #include "fsm.h"
+#include "pins.h"
 
-#define STATE_INDICATOR_LED 38
 #define BRIGHT 64
-#define STATE_TRANSITION_PIN 5
 #define DEBOUNCE_DELAY 10
 #define NUM_STATES 7
 
@@ -41,7 +41,12 @@ FSM::FSM() {
 }
 
 void FSM::tick() {
+    // check for websocket commands
     checkCommandUpdate();
+
+    const CollisionReading reading = readCollisionDetection();
+    if (reading.imminent_collision && state != 0) updateState(0, 0);
+
     (this->*currentState)();
 }
 
@@ -66,7 +71,6 @@ void FSM::checkCommandUpdate() {
         updateState((this->state + 1) % 7, 100);
     }
 } 
-
 
 void FSM::stateStop() {
     Serial.println("State: Stopped");

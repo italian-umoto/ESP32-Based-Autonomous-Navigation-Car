@@ -15,20 +15,11 @@
 #include "driver/pulse_cnt.h"
 #include "driver/mcpwm_prelude.h"
 #include "motors.h"
+#include "pins.h"
 #include "motor_calibration.h"
 #include <Arduino.h>
 
 static const char *TAG = "MOTOR";
-
-// GPIO Pins (L293D inputs M1/M2, quadrature encoder channels A/B)
-#define LEFT_M1                       21
-#define LEFT_M2                       4  // LARRY I changed this ****
-#define LEFT_A                        41
-#define LEFT_B                        42
-#define RIGHT_M1                      39
-#define RIGHT_M2                      40
-#define RIGHT_A                       2
-#define RIGHT_B                       1
 
 #define BDC_ENCODER_PCNT_HIGH_LIMIT   1000
 #define BDC_ENCODER_PCNT_LOW_LIMIT    -1000

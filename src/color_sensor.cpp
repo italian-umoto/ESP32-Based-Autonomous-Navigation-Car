@@ -1,10 +1,6 @@
 #include "color_sensor.h"
+#include "pins.h"
 #include <Arduino.h>
-
-constexpr int SENSOR_PIN = 16;
-constexpr int RED_LED_PIN = 6;
-constexpr int GREEN_LED_PIN = 7;
-constexpr int BLUE_LED_PIN = 15;
 
 constexpr int NUM_SAMPLES = 16;
 constexpr int DARK_THRESHOLD = 10;
@@ -25,7 +21,7 @@ void colorInit() {
     analogReadResolution(12);
 
     // Allow measurement of higher input voltages.
-    analogSetPinAttenuation(SENSOR_PIN, ADC_11db);
+    analogSetPinAttenuation(COLOR_SENSOR_PIN, ADC_11db);
 }
 
 void resetLED() {
@@ -38,7 +34,7 @@ int readAverage() {
     long total = 0;
 
     for (int i = 0; i < NUM_SAMPLES; i++) {
-        total += analogRead(SENSOR_PIN);
+        total += analogRead(COLOR_SENSOR_PIN);
         delayMicroseconds(100);
     }
 
