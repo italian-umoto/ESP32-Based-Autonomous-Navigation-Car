@@ -22,6 +22,7 @@
  *
  * Effects: Will cause robot to move (or stop moving)
  */
+void drive_wheels(float left_cps, float right_cps);
 void drive_stop(void);
 void drive_forward(float speed);
 void drive_backward(float speed);
@@ -29,3 +30,4 @@ void drive_pivot_cw(float speed);
 void drive_pivot_ccw(float speed);
 void drive_turn_right(float radius_mm);
 void drive_turn_left(float radius_mm);
+

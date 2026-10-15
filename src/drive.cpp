@@ -8,7 +8,7 @@
 #define DRIVE_TURN_SPEED 200
 
 // Scale down the inputs to clamp in the max CPS
-static void drive_wheels(float left_cps, float right_cps)
+void drive_wheels(float left_cps, float right_cps)
 {
     float peak = fmaxf(fabsf(left_cps), fabsf(right_cps));
     if (peak > DRIVE_MAX_WHEEL_CPS) {
