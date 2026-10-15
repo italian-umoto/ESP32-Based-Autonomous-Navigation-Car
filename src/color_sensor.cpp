@@ -5,7 +5,7 @@
 constexpr int NUM_SAMPLES = 16;
 constexpr int DARK_THRESHOLD = 10;
 constexpr int WHITE_THRESHOLD = 150;
-constexpr float COLOR_DOMINANCE = 1.25f;
+constexpr float COLOR_DOMINANCE = 1.1f;
 
 constexpr int LED_SETTLE_MS = 10;
 constexpr int BETWEEN_READINGS_MS = 10;

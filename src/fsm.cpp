@@ -68,7 +68,7 @@ void FSM::checkCommandUpdate() {
     if (getCommand(cmd)) {
         updateState(cmd.value, cmd.altValue);
     } else if (buttonPressed()) {
-        updateState((this->state + 1) % 7, 100);
+        updateState((this->state + 1) % 7, 400);
     }
 } 
 
