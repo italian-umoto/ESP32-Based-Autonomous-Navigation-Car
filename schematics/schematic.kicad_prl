@@ -58,7 +58,7 @@
     "ssh_key": ""
   },
   "meta": {
-    "filename": "motor-control.kicad_prl",
+    "filename": "schematic.kicad_prl",
     "version": 5
   },
   "net_inspector_panel": {

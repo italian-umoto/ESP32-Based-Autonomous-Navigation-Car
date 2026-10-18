@@ -4141,7 +4141,7 @@
 			(uuid "f2a6e295-eb08-45de-8789-4d64f164e5d8")
 		)
 		(instances
-			(project "motor-control"
+			(project "schematic"
 				(path "/f1b66af7-d78f-42ec-a39a-db168d7d03b1"
 					(reference "R2")
 					(unit 1)
@@ -4293,7 +4293,7 @@
 			(uuid "73ccf289-5183-4d80-8f86-9c71b3de6e3a")
 		)
 		(instances
-			(project "motor-control"
+			(project "schematic"
 				(path "/f1b66af7-d78f-42ec-a39a-db168d7d03b1"
 					(reference "J_Motor_Right")
 					(unit 1)
@@ -4372,7 +4372,7 @@
 			(uuid "0d1fd9c8-4dc7-478d-956e-7de67bb50d0b")
 		)
 		(instances
-			(project "motor-control"
+			(project "schematic"
 				(path "/f1b66af7-d78f-42ec-a39a-db168d7d03b1"
 					(reference "D3")
 					(unit 1)
@@ -5039,7 +5039,7 @@
 			(uuid "e084c61c-51ac-4f7a-a669-6bbc0292c989")
 		)
 		(instances
-			(project "motor-control"
+			(project "schematic"
 				(path "/f1b66af7-d78f-42ec-a39a-db168d7d03b1"
 					(reference "D2")
 					(unit 1)
@@ -5472,7 +5472,7 @@
 			(uuid "fd0aa628-74cb-46a1-bd32-889860bebaaa")
 		)
 		(instances
-			(project "motor-control"
+			(project "schematic"
 				(path "/f1b66af7-d78f-42ec-a39a-db168d7d03b1"
 					(reference "R3")
 					(unit 1)

@@ -10,3 +10,8 @@ Makefile
 .clangd
 .ccls
 .DS_Store
+
+# KiCad
+fp-info-cache
+*.lck
+#auto_saved_files#
