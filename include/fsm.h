@@ -19,13 +19,13 @@ class FSM {
         FSM();
 
     private:
-        void stateStop();
-        void stateForward();
-        void stateBackward();
-        void statePivotCW();
-        void statePivotCCW();
-        void stateRightTurn();
-        void stateLeftTurn();
+        void stateStop();//0
+        void stateForward();//1
+        void stateBackward();//2
+        void statePivotCW();//3
+        void statePivotCCW();//4
+        void stateRightTurn();//5
+        void stateLeftTurn();//6
 
         void checkCommandUpdate();
         void updateState(int32_t state, int32_t value);
