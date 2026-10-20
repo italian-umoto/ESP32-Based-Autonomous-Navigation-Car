@@ -3,9 +3,9 @@
 #include <Arduino.h>
 
 constexpr int NUM_SAMPLES = 16;
-constexpr int DARK_THRESHOLD = 5;
+constexpr int DARK_THRESHOLD = 10;
 constexpr int WHITE_THRESHOLD = 150;
-constexpr float COLOR_DOMINANCE = 1.1f;
+constexpr float COLOR_DOMINANCE = 1.25f;
 
 constexpr int LED_SETTLE_MS = 10;
 constexpr int BETWEEN_READINGS_MS = 10;
@@ -72,45 +72,30 @@ colorReading single_read () {
 }
 
 // Main color detection logic
-
 DetectedColor classifyColor(const colorReading& reading) {
-    // Reference RGB values:
-    // Yellow: R: 65  G: 29  B: 12
-    // Blue:   R: 15  G: 16  B: 22
-    // Red:    R: 28  G: 7   B: 5
-    // Dark:   R: 13  G: 8   B: 5
+    
+    const int brightest = max(reading.red, max(reading.green, reading.blue));
 
-    int yellow_error =
-        (reading.red - 65) * (reading.red - 65) +
-        (reading.green - 29) * (reading.green - 29) +
-        (reading.blue - 12) * (reading.blue - 12);
+    if (brightest < DARK_THRESHOLD) return DetectedColor::Dark;
 
-    int blue_error =
-        (reading.red - 15) * (reading.red - 15) +
-        (reading.green - 16) * (reading.green - 16) +
-        (reading.blue - 22) * (reading.blue - 22);
+    const bool red =
+        reading.red  > 10 && reading.blue < 10 && reading.green < 10;
 
-    int red_error =
-        (reading.red - 28) * (reading.red - 28) +
-        (reading.green - 7) * (reading.green - 7) +
-        (reading.blue - 5) * (reading.blue - 5);
+    const bool blue =
+        reading.blue > reading.red * COLOR_DOMINANCE &&
+        reading.blue > reading.green * COLOR_DOMINANCE;
 
-    int dark_error =
-        (reading.red - 13) * (reading.red - 13) +
-        (reading.green - 8) * (reading.green - 8) +
-        (reading.blue - 5) * (reading.blue - 5);
+    const bool yellow =
+        reading.red > reading.blue * COLOR_DOMINANCE &&
+        reading.green > reading.blue * COLOR_DOMINANCE;
 
-    // Find minimum error
-    int min_error = min(min(yellow_error, blue_error),
-                        min(red_error, dark_error));
-
-    if (min_error == yellow_error) return DetectedColor::Yellow;
-    if (min_error == blue_error)   return DetectedColor::Blue;
-    if (min_error == red_error)    return DetectedColor::Red;
-
+    if (red) return DetectedColor::Red;
+    if (yellow) return DetectedColor::Yellow;
+    if (blue) return DetectedColor::Blue;
+    if (brightest > WHITE_THRESHOLD) return DetectedColor::White;
+    //Dark returned as default
     return DetectedColor::Dark;
 }
-
 
 const char* colorToString(DetectedColor color) {
     switch (color) {

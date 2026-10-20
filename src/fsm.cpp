@@ -5,6 +5,8 @@
 #include "drive.h"
 #include "fsm.h"
 #include "pins.h"
+#include "motors.h"
+#include "color_sensor.h"
 
 #define BRIGHT 64
 #define DEBOUNCE_DELAY 10
@@ -34,6 +36,60 @@ static bool buttonPressed() {
     }
 
     return false;
+}
+
+
+static void performLaneFollowing(DetectedColor target_color) {
+    static int detected_in_phase_count = 0;
+    static bool on_phase = false;
+    static long swap_phase_millis = 0;
+
+    const long swap_period = 300;
+    const int slow_speed = 100;
+    const int fast_speed = 100;
+
+    const colorReading reading = single_read();
+    const DetectedColor color = classifyColor(reading);
+    printReading(reading, color);
+
+    long now = millis();
+    bool detected_in_phase = (detected_in_phase_count > 1) && on_phase || (detected_in_phase_count > 3) && (!on_phase);
+
+    if (swap_phase_millis < now && detected_in_phase) {
+        on_phase = !on_phase;
+        swap_phase_millis = now + swap_period;
+        detected_in_phase_count = 0;
+        Serial.println("swap");
+    }
+
+    if (!detected_in_phase) {
+        bool on_color = (target_color == color);
+        if (on_phase) {
+            // turn right until on color
+            drive_wheels(fast_speed, slow_speed);
+
+
+            if (on_color) {
+                Serial.print("on count ");
+                Serial.println(detected_in_phase_count);
+
+                detected_in_phase_count ++;
+            }
+        } else {
+            // turn left until off color
+            drive_wheels(slow_speed, fast_speed);
+
+
+            if (!on_color) {
+                Serial.print("off count ");
+                Serial.println(detected_in_phase_count);
+
+                detected_in_phase_count ++;
+            }
+        }
+    } else {
+        drive_wheels(fast_speed, fast_speed);
+    }
 }
 
 FSM::FSM() {
