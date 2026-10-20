@@ -2,6 +2,7 @@
 #include "collision.h"
 #include "motors.h"
 #include "fsm.h"
+#include "color_sensor.h"
 
 FSM fsm;
 
