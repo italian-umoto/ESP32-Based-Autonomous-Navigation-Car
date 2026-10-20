@@ -2,11 +2,10 @@
 #include "battery.h"
 #include <queue>
 
+#define SAMPLES 10
 #define VOLT_STEP 3.3 / 4096
-#define QUEUE_LEN 10
+#define VOLT_MULT_RATIO (R_SHUNT + R_DIV) / R_SHUNT
 
-// std::queue<double> q;
-int samples = 0;
 double filtered_voltage;
 
 void batteryInit() {
@@ -15,17 +14,9 @@ void batteryInit() {
 }
 
 BatteryLevel checkBatteryLevel() {
-    double voltage = analogRead(BAT_VOLTAGE_PIN) * VOLT_STEP;
-    // double voltage_to_remove = 0.0;
+    double voltage = analogRead(BAT_VOLTAGE_PIN) * VOLT_STEP * VOLT_MULT_RATIO;
 
-    // q.push(voltage);
-    // if (samples <= QUEUE_LEN) {
-    //     samples++;
-    // } else {
-    //     double voltage_to_remove = q.front();
-    //     q.pop();
-    // }
-    filtered_voltage = (filtered_voltage * (QUEUE_LEN - 1) + voltage) / QUEUE_LEN;
+    filtered_voltage = (filtered_voltage * (SAMPLES - 1) + voltage) / SAMPLES;
 
     bool bat_stat = (filtered_voltage < THRESHOLD_VOLTAGE);
     char str[50] = "";
