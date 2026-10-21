@@ -1,9 +1,15 @@
 #pragma once
 
 struct colorReading{
-    int red;
-    int green;
-    int blue;
+    float red;
+    float green;
+    float blue;
+    int rawRed;
+    int rawGreen;
+    int rawBlue;
+    float smoothedRed;
+    float smoothedGreen;
+    float smoothedBlue;
 };
 
 enum class DetectedColor{
@@ -21,4 +27,4 @@ const char* colorToString(DetectedColor color);
 void printReading(const colorReading& reading, DetectedColor color);
 void resetLED();
 int readAverage();
-int readReflection(int ledPin, int ambient);
+int readReflection(int ledPin);

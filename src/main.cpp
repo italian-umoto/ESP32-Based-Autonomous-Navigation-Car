@@ -14,9 +14,6 @@ void setup() {
     setupCollisionDetection();
 }
 
-
-
-
 void loop() {
     fsm.tick();
 }

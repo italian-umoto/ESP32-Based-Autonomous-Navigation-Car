@@ -2,7 +2,7 @@
 #include "pins.h"
 #include <Arduino.h>
 
-static const int COLLISION_THRESHOLD = 900;
+static const int COLLISION_THRESHOLD = 400;
 static const int NUM_SAMPLES = 4;
 
 static int readAverageCollison() {

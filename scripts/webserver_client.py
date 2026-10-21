@@ -9,7 +9,7 @@ AUTH_ID    = "MSMOKETEST01"
 CMD_PREFIX = "MAGICSMOKE67"
 DEFAULT_URL = "ws://10.5.9.24:80/ws"
 #DEFAULT_URL = "ws://10.0.0.95:80/ws"
-NUM_STATES = 7
+NUM_STATES = 8
 
 
 def build_command(line: str):
@@ -20,12 +20,14 @@ def build_command(line: str):
         state = int(parts[0])
     except ValueError:
         return None
+
+    # IDs 0-6: manual, 7: solo.
     if not 0 <= state < NUM_STATES:
         print(f"  state must be 0-{NUM_STATES - 1}")
         return None
 
     if len(parts) == 1 or parts[1].upper() == "X":
-        arg = "X"
+        arg = "0"
     else:
         try:
             arg = str(int(parts[1]))

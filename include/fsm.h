@@ -1,58 +1,31 @@
 #pragma once
 #include <stdint.h>
+#include "color_sensor.h"
 
-/* Our sick and cool state machine class
- *
- * Each state is associated with a movement (see states below)
- * States can change via websocket command or on-breadboard button press
- */
 class FSM {
-    public:
-        /* tick
-         * calls state method according to this->currentState
-         */
-        void tick();
+public:
+    enum class BotRole { Bot1, Bot2 };
+    enum class State {
+        Idle, CrossOutbound, TurnBack, FindPrimaryLane, AlignWithPrimaryLane,
+        FollowPrimaryLane, TurnTowardYellow, FindYellowLane, AlignWithYellowLane,
+        FollowYellowLane, TurnTowardHome, CrossHome, Complete
+    };
+    void tick();
 
-        /* FSM
-         * sets pin for the fun rgbled state identifier
-         */
-        FSM();
+private:
+    void transitionTo(State next);
+    bool turn(int degrees); // positive = clockwise, negative = counterclockwise.
+    void followLane(DetectedColor target, DetectedColor observed);
 
-    private:
-        void stateStop();//0
-        void stateForward();//1
-        void stateBackward();//2
-        void statePivotCW();//3
-        void statePivotCCW();//4
-        void stateRightTurn();//5
-        void stateLeftTurn();//6
+    // TODO default state is crossoutbound and solo true just for testing
+    State state = State::CrossOutbound;
+    BotRole role = BotRole::Bot1;
+    bool solo = true;
+    uint32_t manualCommand = 0;
+    uint32_t manualValue = 0;
 
-        void checkCommandUpdate();
-        void updateState(int32_t state, int32_t value);
+    int entryLeft = 0;
+    int entryRight = 0;
+    int primaryLaneMatches = 0;
 
-        void (FSM::*currentState)() = &FSM::stateStop;
-
-        static constexpr void (FSM::*statesList[])() = {
-            &FSM::stateStop,
-            &FSM::stateForward,
-            &FSM::stateBackward,
-            &FSM::statePivotCW,
-            &FSM::statePivotCCW,
-            &FSM::stateRightTurn,
-            &FSM::stateLeftTurn,
-        };
-
-        // Current state
-        // 0: Stop 
-        // 1: Forward 
-        // 2: Backward 
-        // 3: Pivot CW 
-        // 4: Pivot CCW 
-        // 5: Right Turn 
-        // 6: Left Turn
-        uint32_t state = 0;
-
-        // Value given after comma in websocket command 
-        // (either speed or radius dependent on state)
-        uint32_t cmd_value = 0;
 };

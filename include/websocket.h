@@ -46,8 +46,8 @@ bool getCommand(Command& outCmd);
  *              'MAGICSMOKE67 set: STATE=1,30'
  *
  * STATE VALUES:
- *  value in packet represents state of machine (0-6), values outside
- *  are undefined by the websocket
+ *  Values 0-6 select manual motor commands. During a solo run, only
+ *  Stop and a new solo-start command are accepted.
  *
  *  0 => Stop
  *  1 => Both motors forward
@@ -56,12 +56,16 @@ bool getCommand(Command& outCmd);
  *  4 => Pivot CCW
  *  5 => Right turn at radius r
  *  6 => Left turn at radius r
+ *  7 => Start/restart solo navigation; secondary argument selects bot 1 or 2
+ *
+ *              'MAGICSMOKE67 set: STATE=7,1'
+ *              'MAGICSMOKE67 set: STATE=7,2'
  *
  *              'MAGICSMOKE67 set: STATE=1,50'
  *
- *  For motor commands with no secondary argument, use X to fill null
+ *  Stop cancels navigation and returns to manual mode. Use numeric zero:
  *
- *              'MAGICSMOKE67 set: STATE=0,X'
+ *              'MAGICSMOKE67 set: STATE=0,0'
  */
 
 // ===================================================================
