@@ -23,22 +23,7 @@ This project was developed by:
 
 * **[Name]** – [role]
 
-
 ## How It Works
-
-The FSM uses one course sequence for both solo roles:
-
-```text
-Idle -> CrossOutbound -> TurnBack -> FindPrimaryLane -> AlignWithPrimaryLane
-     -> FollowPrimaryLane -> TurnTowardYellow -> FindYellowLane
-     -> AlignWithYellowLane -> FollowYellowLane -> TurnTowardHome
-     -> CrossHome -> Complete
-```
-
-Bot #1 finds blue and turns left at lane alignment and lane-ending turns.
-Bot #2 finds red and turns right at those steps. Both bots turn clockwise
-180 degrees after the first crossing and align with both primary and yellow lanes.
-
 WebSocket commands:
 
 ```text
