@@ -9,21 +9,14 @@ FSM fsm;
 
 void setup() {
     Serial.begin(115200);
-    // setup_motors();
-    // websocketInit();
-    // colorInit();
+    setup_motors();
+    websocketInit();
+    colorInit();
     batteryInit();
-    // setupCollisionDetection();
+    setupCollisionDetection();
 }
 
 void loop() {
-    // fsm.tick();
-
-    // const colorReading reading = single_read();
-    // const DetectedColor color = classifyColor(reading);
-    checkBatteryLevel();
-    
-
-    // printReading(reading, color);
+    fsm.tick();
 }
 
