@@ -3,15 +3,9 @@
 #include <Arduino.h>
 
 constexpr int NUM_SAMPLES = 16;
-constexpr float EMA_ALPHA = 0.5f;
-
-static bool emaInitialized = false;
-static float smoothedRed = 0.0f;
-static float smoothedGreen = 0.0f;
-static float smoothedBlue = 0.0f;
 
 // TODO change calibration values if we change chasis or color sensors
-// still not really working, color sensors are too inconsistent
+// still not really working, color sensors are inconsistent
 
 // LED calibration references
 constexpr float WHITE_R = 107.0f;
@@ -23,7 +17,6 @@ constexpr float DARK_B = 6.0f;
 constexpr int DARK_TOTAL_THRESHOLD = 60;
 
 void colorInit() {
-    emaInitialized = false;
     pinMode(RED_LED_PIN, OUTPUT);
     pinMode(GREEN_LED_PIN, OUTPUT);
     pinMode(BLUE_LED_PIN, OUTPUT);
@@ -57,7 +50,7 @@ int readAverage() {
 int readReflection(int ledPin) {
     resetLED();
 
-    delayMicroseconds(2000);
+    delayMicroseconds(500);
     const int ambient = readAverage();
 
     digitalWrite(ledPin, HIGH);
@@ -73,36 +66,24 @@ colorReading single_read () {
     const int green = readReflection(GREEN_LED_PIN);
     const int blue = readReflection(BLUE_LED_PIN);
 
-    if (!emaInitialized) {
-        smoothedRed = red;
-        smoothedGreen = green;
-        smoothedBlue = blue;
-        emaInitialized = true;
-    } else { // exponential moving average
-        smoothedRed = EMA_ALPHA * red + (1.0f - EMA_ALPHA) * smoothedRed;
-        smoothedGreen = EMA_ALPHA * green + (1.0f - EMA_ALPHA) * smoothedGreen;
-        smoothedBlue = EMA_ALPHA * blue + (1.0f - EMA_ALPHA) * smoothedBlue;
-    }
-
     // remove each channel's dark offset and scale its white reference to one
     // clamp negative results so readings below each dark reference stay at 0
-    const float calibratedRed = max(0.0f, (smoothedRed - DARK_R) / (WHITE_R - DARK_R));
-    const float calibratedGreen = max(0.0f, (smoothedGreen - DARK_G) / (WHITE_G - DARK_G));
-    const float calibratedBlue = max(0.0f, (smoothedBlue - DARK_B) / (WHITE_B - DARK_B));
+    const float calibratedRed = max(0.0f, (red - DARK_R) / (WHITE_R - DARK_R));
+    const float calibratedGreen = max(0.0f, (green - DARK_G) / (WHITE_G - DARK_G));
+    const float calibratedBlue = max(0.0f, (blue - DARK_B) / (WHITE_B - DARK_B));
     const float total = calibratedRed + calibratedGreen + calibratedBlue;
-    if (total == 0.0f) return {0.0f, 0.0f, 0.0f, red, green, blue,
-                              smoothedRed, smoothedGreen, smoothedBlue};
+    if (total == 0.0f) return {0.0f, 0.0f, 0.0f, red, green, blue};
 
     return {calibratedRed / total, calibratedGreen / total, calibratedBlue / total,
-            red, green, blue, smoothedRed, smoothedGreen, smoothedBlue};
+            red, green, blue};
 };
 
 DetectedColor classifyColor(const colorReading& reading){
     
-    const float totalSmoothed = reading.smoothedRed + reading.smoothedGreen + reading.smoothedBlue;
-    if (totalSmoothed <= DARK_TOTAL_THRESHOLD) return DetectedColor::Dark;
+    const int totalRaw = reading.rawRed + reading.rawGreen + reading.rawBlue;
+    if (totalRaw <= DARK_TOTAL_THRESHOLD) return DetectedColor::Dark;
 
-    // ~equal normalized channels
+    // approx equal normalized channels
     if (reading.red >= 0.25f && reading.red <= 0.42f &&
         reading.green >= 0.25f && reading.green <= 0.42f &&
         reading.blue >= 0.25f && reading.blue <= 0.42f)
@@ -136,9 +117,8 @@ const char* colorToString(DetectedColor color) {
 };
 
 void printReading(const colorReading& reading, DetectedColor color) {
-    Serial.printf("Raw R:%4d G:%4d B:%4d  Smoothed R:%6.1f G:%6.1f B:%6.1f  Normalized R:%5.3f G:%5.3f B:%5.3f  color:%-6s\n",
+    Serial.printf("Raw R:%4d G:%4d B:%4d  Normalized R:%5.3f G:%5.3f B:%5.3f  color:%-6s\n",
                   reading.rawRed, reading.rawGreen, reading.rawBlue,
-                  reading.smoothedRed, reading.smoothedGreen, reading.smoothedBlue,
                   reading.red, reading.green, reading.blue, colorToString(color));
 };
 

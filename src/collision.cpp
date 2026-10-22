@@ -37,5 +37,3 @@ CollisionReading readCollisionDetection() {
     int reflected = illuminated - background;
     return {background, illuminated, reflected, reflected > COLLISION_THRESHOLD};
 }
-
-

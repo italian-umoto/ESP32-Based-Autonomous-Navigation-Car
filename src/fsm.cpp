@@ -7,18 +7,17 @@
 #include "motors.h"
 
 static void performLaneFollowing(DetectedColor target_color);
-static constexpr int PRIMARY_LANE_CONFIRM_READINGS = 1;
 
 // encoder counts per wheel for a 90-degree empirically
 static constexpr int COUNTS_PER_90 = 850;
-static constexpr float FORWARD_CPS = 300;
+static constexpr float FORWARD_CPS = 500;
 static constexpr float TURN_CPS = 600;
 
 void FSM::tick() {
     Command cmd;
     const bool hasCommand = getCommand(cmd);
 
-    // 0 --> stop
+    // 0 -> stop
     if (hasCommand && cmd.value == 0) {
         solo = false;
         manualCommand = manualValue = 0;
@@ -38,12 +37,9 @@ void FSM::tick() {
     // read wall and color and switch states based on it
     const CollisionReading collision = readCollisionDetection();
     const bool wall = collision.imminent_collision;
-    // if (wall) drive_stop();
     const colorReading reading = single_read();
     const DetectedColor color = classifyColor(reading);
     printReading(reading, color);
-    delay(100);
-
 
     // manual commands
     if (!solo) {
@@ -75,14 +71,13 @@ void FSM::tick() {
             else drive_forward(FORWARD_CPS);
             break;
         case State::TurnBack:
-            // wait till we turn 180
             if (!turn(180)) break;
             transitionTo(State::FindPrimaryLane);
             break;
         case State::FindPrimaryLane:
             // require consequetive readings
             primaryLaneMatches = color == primaryColor ? primaryLaneMatches + 1 : 0;
-            if (primaryLaneMatches >= PRIMARY_LANE_CONFIRM_READINGS) transitionTo(State::AlignWithPrimaryLane);
+            if (primaryLaneMatches >= 2) transitionTo(State::AlignWithPrimaryLane);
             else drive_forward(FORWARD_CPS);
             break;
         case State::AlignWithPrimaryLane:
@@ -91,7 +86,7 @@ void FSM::tick() {
             break;
         case State::FollowPrimaryLane:
             if (wall) transitionTo(State::TurnTowardYellow);
-            else followLane(primaryColor, color);
+            else performLaneFollowing(primaryColor);
             break;
         case State::TurnTowardYellow:
             if (!turn(turnDirection)) break;
@@ -108,7 +103,7 @@ void FSM::tick() {
             break;
         case State::FollowYellowLane:
             if (wall) transitionTo(State::TurnTowardHome);
-            else followLane(DetectedColor::Yellow, color);
+            else performLaneFollowing(DetectedColor::Yellow);
             break;
         case State::TurnTowardHome:
             if (!turn(turnDirection)) break;
@@ -127,7 +122,6 @@ void FSM::transitionTo(State next) {
     entryLeft = left_encoder_count();
     entryRight = right_encoder_count();
     primaryLaneMatches = 0;
-
 }
 
 bool FSM::turn(int degrees) {
@@ -145,14 +139,6 @@ bool FSM::turn(int degrees) {
     return false;
 }
 
-void FSM::followLane(DetectedColor target, DetectedColor observed) {
-    // Bot1 searches right for target lane, turns left after finding it to track the edge. vice versa for bot2
-    const bool steerRight = role == BotRole::Bot1 ? observed != target : observed == target;
-    if (steerRight) drive_wheels(200, 100);
-    else drive_wheels(100, 200);
-}
-
-// unused atm
 static void performLaneFollowing(DetectedColor target_color) {
     static int detected_in_phase_count = 0;
     static bool on_phase = false;

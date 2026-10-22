@@ -7,9 +7,6 @@ struct colorReading{
     int rawRed;
     int rawGreen;
     int rawBlue;
-    float smoothedRed;
-    float smoothedGreen;
-    float smoothedBlue;
 };
 
 enum class DetectedColor{

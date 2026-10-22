@@ -17,7 +17,6 @@ private:
     bool turn(int degrees); // positive = clockwise, negative = counterclockwise.
     void followLane(DetectedColor target, DetectedColor observed);
 
-    // TODO default state is crossoutbound and solo true just for testing
     State state = State::CrossOutbound;
     BotRole role = BotRole::Bot1;
     bool solo = true;
