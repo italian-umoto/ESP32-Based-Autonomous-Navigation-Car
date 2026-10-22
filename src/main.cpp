@@ -3,6 +3,7 @@
 #include "collision.h"
 #include "motors.h"
 #include "drive.h"
+#include "battery.h"
 #include "fsm.h"
 
 FSM fsm;
@@ -12,6 +13,7 @@ void setup() {
     setup_motors();
     websocketInit();
     colorInit();
+    batteryInit();
     setupCollisionDetection();
 }
 
