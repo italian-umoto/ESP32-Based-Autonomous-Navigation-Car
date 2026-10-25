@@ -1,20 +1,26 @@
-#include "color_sensor.h"
-#include "websocket.h"
 #include "collision.h"
-#include "motors.h"
+#include "color_sensor.h"
 #include "fsm.h"
+#include "motors.h"
+#include "websocket.h"
 
 FSM fsm;
 
 void setup() {
-    Serial.begin(115200);
-    setupColorSensors();
-    setup_motors();
-    websocketInit();
-    setupCollisionDetection();
+  Serial.begin(115200);
+  // setupColorSensors();
+  setup_motors();
+  websocketInit();
+  // setupCollisionDetection();
 }
 
 void loop() {
-    fsm.tick();
+  // Serial.print("LEFT   ");
+  // leftColorSensor.testReading();
+  // Serial.print("RIGHT  ");
+  // rightColorSensor.testReading();
+  // Serial.println();
+  // delay(200);
+  fsm.tick();
+  delay(10);
 }
-

@@ -4,11 +4,11 @@ import sys
 
 import websockets
 
-AUTH_ID    = "MSMOKETEST01"
-#AUTH_ID    = "MAGICSMOKE67"
+AUTH_ID = "MSMOKETEST01"
+# AUTH_ID    = "MAGICSMOKE67"
 CMD_PREFIX = "MAGICSMOKE67"
 DEFAULT_URL = "ws://10.5.9.24:80/ws"
-#DEFAULT_URL = "ws://10.0.0.95:80/ws"
+# DEFAULT_URL = "ws://10.0.0.95:80/ws"
 NUM_STATES = 7
 
 
