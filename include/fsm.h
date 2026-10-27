@@ -1,58 +1,44 @@
 #pragma once
+#include "behavior.h"
+#include "route.h"
 #include <stdint.h>
 
-/* Our sick and cool state machine class
+/* Mode
  *
- * Each state is associated with a movement (see states below)
- * States can change via websocket command or on-breadboard button press
+ * Who is choosing the Motion
+ */
+enum class Mode {
+  Remote,
+  Solo,
+};
+
+/* FSM
+ *
+ * Owns: the command mailbox, mode, wall read, and tick rate
+ *
+ * Commands (cmd.value, cmd.altValue):
+ *   0           -> Remote, stop
+ *   1..6, param -> Remote, that Motion with altValue as its param
+ *   7, step     -> Solo, start the route at `step` (0 = full run)
+ * Button        -> Solo, start the route at step 0
  */
 class FSM {
-    public:
-        /* tick
-         * calls state method according to this->currentState
-         */
-        void tick();
+public:
+  FSM();
 
-        /* FSM
-         * sets pin for the fun rgbled state identifier
-         */
-        FSM();
+  // Call from loop() in main.cpp
+  void tick();
 
-    private:
-        void stateStop();
-        void stateForward();
-        void stateBackward();
-        void statePivotCW();
-        void statePivotCCW();
-        void stateRightTurn();
-        void stateLeftTurn();
+private:
+  void handleCommand(int32_t value, int32_t altValue);
+  void startSolo(uint8_t fromStep);
+  void enterStep(const Step &step);
+  bool buttonPressed();
 
-        void checkCommandUpdate();
-        void updateState(int32_t state, int32_t value);
+  static constexpr uint32_t TICK_MS = 10;
 
-        void (FSM::*currentState)() = &FSM::stateStop;
-
-        static constexpr void (FSM::*statesList[])() = {
-            &FSM::stateStop,
-            &FSM::stateForward,
-            &FSM::stateBackward,
-            &FSM::statePivotCW,
-            &FSM::statePivotCCW,
-            &FSM::stateRightTurn,
-            &FSM::stateLeftTurn,
-        };
-
-        // Current state
-        // 0: Stop 
-        // 1: Forward 
-        // 2: Backward 
-        // 3: Pivot CW 
-        // 4: Pivot CCW 
-        // 5: Right Turn 
-        // 6: Left Turn
-        uint32_t state = 0;
-
-        // Value given after comma in websocket command 
-        // (either speed or radius dependent on state)
-        uint32_t cmd_value = 0;
+  Behavior m_behavior;
+  Route m_route;
+  Mode m_mode = Mode::Remote;
+  uint32_t m_lastTickMs = 0;
 };

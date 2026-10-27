@@ -4,12 +4,12 @@
 #pragma once
 
 // Distance between the wheels
-#define DRIVE_TRACK_WIDTH_MM   150.0f
+#define DRIVE_TRACK_WIDTH_MM 150.0f
 
 // Highest cps the motors can reliably hold under load. (This is conservative)
-// This was taking 75% of what the encoder count was at BDC_MCPWM_DUTY_TICK_MAX - 1
-#define DRIVE_MAX_WHEEL_CPS    1300.0f
-
+// This was taking 75% of what the encoder count was at BDC_MCPWM_DUTY_TICK_MAX
+// - 1
+#define DRIVE_MAX_WHEEL_CPS 1300.0f
 
 /* drive_stop/forward/backward/pivot cw,ccw/turn left,right
  *
@@ -29,3 +29,11 @@ void drive_pivot_cw(float speed);
 void drive_pivot_ccw(float speed);
 void drive_turn_right(float radius_mm);
 void drive_turn_left(float radius_mm);
+
+// + degrees = CW, - = CCW -- pivots in place at `speed` cps per wheel.
+void drive_rotate_start(float degrees, float speed);
+
+// Call every tick
+// Stops each wheel at its target
+// returns true when both are done
+bool drive_rotate_update(void);

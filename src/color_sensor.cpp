@@ -38,6 +38,23 @@ void setupColorSensors() {
   rightColorSensor.colorSensorInit();
 }
 
+bool bothSensorsSee(DetectedColor target) {
+  if (leftColorSensor.isTracking() || rightColorSensor.isTracking()) {
+    Serial.println(
+        "bothSensorsSee: sensor still tracking, call laneStop() first");
+    return false;
+  }
+
+  const DetectedColor left =
+      leftColorSensor.classifyColor(leftColorSensor.singleRead());
+  if (left != target)
+    return false;
+
+  const DetectedColor right =
+      rightColorSensor.classifyColor(rightColorSensor.singleRead());
+  return right == target;
+}
+
 ColorSensor::ColorSensor(int sensorPin, int redPin, int greenPin, int bluePin,
                          const SensorCal &cal)
     : m_sensor_pin(sensorPin), m_red_pin(redPin), m_green_pin(greenPin),
@@ -62,7 +79,7 @@ void ColorSensor::resetLED() {
   digitalWrite(m_red_pin, LOW);
   digitalWrite(m_green_pin, LOW);
   digitalWrite(m_blue_pin, LOW);
-};
+}
 
 int ColorSensor::readAverage() {
   long total = 0;
@@ -73,7 +90,7 @@ int ColorSensor::readAverage() {
   }
 
   return total / NUM_SAMPLES;
-};
+}
 
 int ColorSensor::readReflection(int ledPin, int ambient) {
   digitalWrite(ledPin, HIGH);
@@ -84,7 +101,7 @@ int ColorSensor::readReflection(int ledPin, int ambient) {
   digitalWrite(ledPin, LOW);
 
   return max(0, illuminated - ambient);
-};
+}
 
 colorReading ColorSensor::singleRead() {
   resetLED();
@@ -101,7 +118,6 @@ colorReading ColorSensor::singleRead() {
   delay(BETWEEN_READINGS_MS);
 
   const int blue = readReflection(m_blue_pin, ambient);
-  delay(BETWEEN_READINGS_MS);
 
   if (m_tracking)
     digitalWrite(ledPinFor(m_target), HIGH);
@@ -151,7 +167,7 @@ static const char *colorToString(DetectedColor color) {
     return "White";
   }
   return "Unknown";
-};
+}
 
 void ColorSensor::testReading() {
   const colorReading reading = singleRead();
@@ -170,7 +186,7 @@ void ColorSensor::printReading(const colorReading &reading,
   Serial.print(reading.blue);
   Serial.print("  color: ");
   Serial.println(colorToString(color));
-};
+}
 
 void ColorSensor::startTracking(DetectedColor target) {
   const int pin = ledPinFor(target);

@@ -6,19 +6,12 @@
 /* This algorithm assumes that there are two color sensors
  * on the robot and that they are about the width of the lane apart
  */
-static LaneStatus lastStatus = LaneStatus::Lost;
-static uint32_t lastStepMs = 0;
-static uint32_t settleUntilMs = 0;
 
 constexpr float KP = 1.0f;       // TUNABLE
 constexpr float KI = 0.0f;       // TUNABLE
 constexpr float KD = 0.0f;       // TUNABLE
 constexpr float I_LIMIT = 50.0f; // TUNABLE
 
-// These probably shouldn't be used -- see comment over calcPid()
-// static float prevErr1 = 0.0f;
-// static float prevErr2 = 0.0f;
-// static float lastOutput = 0.0f;
 static float prevErr = 0.0f;
 static float integral = 0.0f;
 
@@ -30,16 +23,12 @@ constexpr uint32_t SETTLE_MS = 50;      // TUNABLE
 constexpr float LOST_THRESHOLD = 0.15f; // TUNABLE
 
 static bool active = false;
-static DetectedColor currentTarget = DetectedColor::Dark;
+static LaneStatus lastStatus = LaneStatus::Lost;
+static uint32_t lastStepMs = 0;
+static uint32_t startMs = 0;
 
 static void steer(float output) {
   const float mag = fabsf(output);
-  // If we are on track, we take a basically straight path which simplifies
-  // the code and keeps the movement *hopefully* smoother assuming mag != 0.
-  //
-  // MIN_RADIUS_MM is set to be the tightest turn we could take to stay on
-  // a line, mag is always a fraction or +/-1, so larger mag => closer to
-  // tightest turn
   const float radius =
       (mag < APPROX_STRAIGHT_THRESH) ? STRAIGHT_RADIUS_MM : MIN_RADIUS_MM / mag;
 
@@ -49,73 +38,62 @@ static void steer(float output) {
     drive_turn_right(radius);
 }
 
-// I am unsure of which version is better here:
-//    return (error - prevErr1) * KP
-// + (error - (2 * prevErr1) + prevErr2) * KD
-// + error * KI
-// + lastOutput;
-// the above is a choice copied from motor module,
-// but the lane detector is a little different in that
-// lastOutput is clamped when the line is lost, making
-// the proportional value lose meaning
 static float calcPid(float error) {
   // KI * I_LIMIT gives the maximum correction that can be applied by the
   // integral term. We constrain to keep it within reasonable bounds
   integral = constrain(integral + error, -I_LIMIT, I_LIMIT);
 
-  // The proportion steers relative to how far off of the line
-  // the robot is right now, this has large impact
-  float output = KP * error
-                 // The integral steers based on error over time (small change
-                 // to correct drift)
-                 + KI * integral
-                 // The derivative steers based on how fast the error changes
-                 // (if error is shrinking and robot is moving toward line, the
-                 // derivative damps the steering)
-                 + KD * (error - prevErr);
+  float output = KP * error + KI * integral + KD * (error - prevErr);
   prevErr = error;
-  // Everything is clamped to a percentage and a sign
   return constrain(output, -1.0f, 1.0f);
 }
 
-LaneStatus followLane(DetectedColor color) {
-  const uint32_t now = millis();
-  // fix this if statement to resolve on color change
-  if (!active) {
-    leftColorSensor.startTracking(color);
-    rightColorSensor.startTracking(color);
-    currentTarget = color;
-    active = true;
+void laneStart(DetectedColor color) {
+  // Restarting while active must not keep
+  // tracking the old color
+  if (active)
+    laneStop();
 
-    prevErr = 0.0f;
-    integral = 0.0f;
-    settleUntilMs = now + SETTLE_MS;
-    lastStepMs = now;
-    lastStatus = LaneStatus::Following;
-  }
+  leftColorSensor.startTracking(color);
+  rightColorSensor.startTracking(color);
+
+  const uint32_t now = millis();
+  startMs = now;
+  lastStepMs = now;
+  prevErr = 0.0f;
+  integral = 0.0f;
+  lastStatus = LaneStatus::Following;
+  active = true;
+}
+
+LaneStatus laneStep(void) {
+  if (!active)
+    return LaneStatus::Lost;
 
   // These two cases are here to allow time for the sensors
   // to hit valid output and to normalize when the pid calculation
   // happens. The assumption is made that this code will run frequently
   // enough that we will almost always hit it around every LANE_PERIOD_MS.
   // This allows us to not include dt in our PID calculation because we
-  // assume a constant interval. If this is not the case, we can either
-  // change the calculation or put this on a timer.
-  if (now < settleUntilMs)
+  // assume a constant interval.
+  const uint32_t now = millis();
+  if (now - startMs < SETTLE_MS)
     return lastStatus;
   if (now - lastStepMs < LANE_PERIOD_MS)
     return lastStatus;
   lastStepMs = now;
 
   // We get values between 0 and 1 from each sensor 0 => black, 1 => color
-  float l = leftColorSensor.lineStrength();
-  float r = rightColorSensor.lineStrength();
+  const float l = leftColorSensor.lineStrength();
+  const float r = rightColorSensor.lineStrength();
 
   float output;
   if (l + r < LOST_THRESHOLD) {
     // This case occurs when both color sensors hit mostly black,
     // meaning we are not on a line anymore and we should just
     // turn towards wherever we last saw some of the target color.
+    // prevErr is intentionally not updated here so the search
+    // direction stays fixed until the line is found again
     output = (prevErr >= 0.0f) ? 1.0f : -1.0f;
     lastStatus = LaneStatus::Lost;
   } else {
@@ -128,7 +106,14 @@ LaneStatus followLane(DetectedColor color) {
     // making the change to the steering the same in both cases which is
     // good because it allows for variation in testing conditions to not
     // require drastically different pid calculations.
-    output = calcPid((l - r) / (l + r));
+    const float error = (l - r) / (l + r);
+
+    // Just reacquired the line: prevErr still holds the old search
+    // direction, which would make the D term spike, so we set to current err
+    if (lastStatus == LaneStatus::Lost)
+      prevErr = error;
+
+    output = calcPid(error);
     lastStatus = LaneStatus::Following;
   }
 
@@ -136,8 +121,10 @@ LaneStatus followLane(DetectedColor color) {
   return lastStatus;
 }
 
-void stopLaneFollowing() {
+void laneStop(void) {
   leftColorSensor.stopTracking();
   rightColorSensor.stopTracking();
+  drive_stop();
   active = false;
+  lastStatus = LaneStatus::Lost;
 }

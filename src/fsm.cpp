@@ -1,119 +1,124 @@
 #include "fsm.h"
 #include "collision.h"
-#include "color_sensor.h"
-#include "drive.h"
-#include "lane_following.h"
+#include "pins.h"
 #include "websocket.h"
 #include <Arduino.h>
-#include <stdint.h>
 
-#define STATE_INDICATOR_LED 38
-#define BRIGHT 64
-#define STATE_TRANSITION_PIN 5
-#define DEBOUNCE_DELAY 10
-#define NUM_STATES 7
+constexpr int32_t CMD_START_ROUTE = 7;
+constexpr uint32_t BUTTON_DEBOUNCE_MS = 10;
+constexpr uint8_t BRIGHT = 64;
 
-static bool buttonPressed() {
-  static int lastButtonState = HIGH;
-  static int currentButtonState = HIGH;
-  static unsigned long lastDebounceTime = 0;
+// ---------------- LED stuff ------------------------
+struct Rgb {
+  uint8_t r, g, b;
+};
 
-  int reading = digitalRead(STATE_TRANSITION_PIN);
+constexpr Rgb STEP_COLORS[] = {
+    {BRIGHT, 0, 0},      {0, BRIGHT, 0},      {0, 0, BRIGHT},
+    {BRIGHT, BRIGHT, 0}, {BRIGHT, 0, BRIGHT}, {0, BRIGHT, BRIGHT},
+};
+constexpr uint8_t NUM_STEP_COLORS =
+    sizeof(STEP_COLORS) / sizeof(STEP_COLORS[0]);
 
-  if (reading != lastButtonState) {
-    lastDebounceTime = millis();
-    lastButtonState = reading;
-  }
-
-  if ((millis() - lastDebounceTime) > DEBOUNCE_DELAY) {
-    if (reading != currentButtonState) {
-      currentButtonState = reading;
-
-      if (currentButtonState == LOW) {
-        return true;
-      }
-    }
-  }
-
-  return false;
+static void showRemote() {
+  rgbLedWrite(STATE_INDICATOR_LED, BRIGHT / 4, BRIGHT / 4, BRIGHT / 4);
 }
+
+static void showStep(uint8_t idx) {
+  const Rgb &c = STEP_COLORS[idx % NUM_STEP_COLORS];
+  rgbLedWrite(STATE_INDICATOR_LED, c.r, c.g, c.b);
+}
+
+// -------------- FSM impl ----------------------------------
 
 FSM::FSM() { pinMode(STATE_TRANSITION_PIN, INPUT_PULLUP); }
 
 void FSM::tick() {
-  // followLane(DetectedColor::Red);
-  checkCommandUpdate();
-  if (readCollisionDetection().imminent_collision) {
-    this->currentState = statesList[0];
+  // Set minimum period
+  const uint32_t now = millis();
+  if (now - m_lastTickMs < TICK_MS)
+    return;
+  m_lastTickMs = now;
+
+  // Check command mailbox
+  Command cmd;
+  if (getCommand(cmd))
+    handleCommand(cmd.value, cmd.altValue);
+  else if (buttonPressed())
+    startSolo(0);
+
+  // Check if hitting a wall
+  const bool wall = readCollisionDetection().imminent_collision;
+
+  // Maybe we're trying to hit a wall
+  if (wall && m_behavior.movesForward()) {
+    const bool solo = m_mode == Mode::Solo;
+    const bool exitCondIsWall = m_route.current().exit == Exit::Wall;
+    if (!(solo && exitCondIsWall)) {
+      Serial.println("Wall: stopping to avoid collision");
+      m_behavior.start(Motion::Stop);
+    }
   }
-  (this->*currentState)();
+
+  // Actually do the motion
+  const BehaviorStatus status = m_behavior.tick();
+
+  // In Solo, let the route decide whether to move on
+  if (m_mode == Mode::Solo) {
+    // tick will return something that isn't nullptr when step is done
+    const Step *next = m_route.tick(wall, status);
+    if (next != nullptr)
+      enterStep(*next);
+  }
 }
 
-void FSM::updateState(int32_t state, int32_t value) {
-  Serial.printf("updateState(%ld, %ld) from state %ld\n", (long)state,
-                (long)value, (long)this->state);
-  if (state < 0 || state >= NUM_STATES) {
-    Serial.print("Invalid state: ");
-    Serial.println(state);
+// Routes to starting solo mode at a specific step,
+// or handles websocket command
+void FSM::handleCommand(int32_t value, int32_t altValue) {
+  if (value == CMD_START_ROUTE) {
+    startSolo(static_cast<uint8_t>(altValue));
     return;
   }
-  this->state = state;
-  this->cmd_value = value;
-  currentState = statesList[state];
-}
 
-void FSM::checkCommandUpdate() {
-  Command cmd;
-  if (getCommand(cmd)) {
-    updateState(cmd.value, cmd.altValue);
-  } else if (buttonPressed()) {
-    updateState((this->state + 1) % NUM_STATES, 800);
+  if (value < 0 || value > 6) {
+    Serial.printf("Unknown command %ld\n", (long)value);
+    return;
   }
+
+  m_mode = Mode::Remote;
+  Serial.printf("Remote: motion %ld, param %ld\n", (long)value, (long)altValue);
+  m_behavior.start(static_cast<Motion>(value), static_cast<float>(altValue));
+  showRemote();
 }
 
-void FSM::stateStop() {
-  Serial.println("State: Stopped");
-  rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, 0, 0);
-  drive_stop();
+void FSM::startSolo(uint8_t fromStep) {
+  m_mode = Mode::Solo;
+  enterStep(m_route.start(fromStep));
 }
 
-void FSM::stateForward() {
-  Serial.println("State: Forward");
-  rgbLedWrite(STATE_INDICATOR_LED, 0, BRIGHT, 0);
-  drive_forward(this->cmd_value);
+// Single place for transition side effects
+void FSM::enterStep(const Step &step) {
+  Serial.printf("Step %u: %s\n", m_route.index(), step.name);
+  m_behavior.start(step.motion, step.param, step.color);
+  showStep(m_route.index());
 }
 
-void FSM::stateBackward() {
-  Serial.println("State: Backward");
-  Serial.printf("Speed: %d\n", this->cmd_value);
-  rgbLedWrite(STATE_INDICATOR_LED, 0, 0, BRIGHT);
-  drive_backward(this->cmd_value);
-}
+bool FSM::buttonPressed() {
+  static int lastReading = HIGH;
+  static int stableState = HIGH;
+  static uint32_t lastChangeMs = 0;
 
-void FSM::statePivotCW() {
-  Serial.println("State: Pivot CW");
-  Serial.printf("Speed: %d\n", this->cmd_value);
-  rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, BRIGHT, 0);
-  drive_pivot_cw(this->cmd_value);
-}
+  const int reading = digitalRead(STATE_TRANSITION_PIN);
+  const uint32_t now = millis();
 
-void FSM::statePivotCCW() {
-  Serial.println("State: Pivot CCW");
-  Serial.printf("Speed: %d\n", this->cmd_value);
-  rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, 0, BRIGHT);
-  drive_pivot_ccw(this->cmd_value);
-}
+  if (reading != lastReading) {
+    lastChangeMs = now;
+    lastReading = reading;
+  }
 
-void FSM::stateRightTurn() {
-  Serial.println("State: Right Turn");
-  Serial.printf("Radius: %d\n", this->cmd_value);
-  rgbLedWrite(STATE_INDICATOR_LED, 0, BRIGHT, BRIGHT);
-  drive_turn_right(this->cmd_value);
-}
-
-void FSM::stateLeftTurn() {
-  Serial.println("State: Left Turn");
-  Serial.printf("Radius: %d\n", this->cmd_value);
-  rgbLedWrite(STATE_INDICATOR_LED, BRIGHT, BRIGHT, BRIGHT);
-  drive_turn_left(this->cmd_value);
+  if (now - lastChangeMs > BUTTON_DEBOUNCE_MS && reading != stableState) {
+    stableState = reading;
+    return stableState == LOW;
+  }
+  return false;
 }
