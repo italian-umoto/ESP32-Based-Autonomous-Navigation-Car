@@ -61,21 +61,20 @@
 				)
 			)
 		)
-		(symbol "22_pin_header_0_1"
+		(symbol "22_pin_header_1_1"
 			(rectangle
 				(start -2.54 -1.27)
 				(end 2.54 -58.42)
 				(stroke
 					(width 0)
-					(type default)
+					(type solid)
 				)
 				(fill
-					(type none)
+					(type color)
+					(color 78 255 67 1)
 				)
 			)
-		)
-		(symbol "22_pin_header_1_1"
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -2.54 0)
 				(length 2.54)
 				(name "1"
@@ -93,7 +92,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -5.08 0)
 				(length 2.54)
 				(name "2"
@@ -111,7 +110,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -7.62 0)
 				(length 2.54)
 				(name "3"
@@ -129,7 +128,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -10.16 0)
 				(length 2.54)
 				(name "4"
@@ -147,7 +146,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -12.7 0)
 				(length 2.54)
 				(name "5"
@@ -165,7 +164,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -15.24 0)
 				(length 2.54)
 				(name "6"
@@ -183,7 +182,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -17.78 0)
 				(length 2.54)
 				(name "7"
@@ -201,7 +200,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -20.32 0)
 				(length 2.54)
 				(name "8"
@@ -219,7 +218,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -22.86 0)
 				(length 2.54)
 				(name "9"
@@ -237,7 +236,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -25.4 0)
 				(length 2.54)
 				(name "10"
@@ -255,7 +254,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -27.94 0)
 				(length 2.54)
 				(name "11"
@@ -273,7 +272,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -30.48 0)
 				(length 2.54)
 				(name "12"
@@ -291,7 +290,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -33.02 0)
 				(length 2.54)
 				(name "13"
@@ -309,7 +308,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -35.56 0)
 				(length 2.54)
 				(name "14"
@@ -327,7 +326,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -38.1 0)
 				(length 2.54)
 				(name "15"
@@ -345,7 +344,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -40.64 0)
 				(length 2.54)
 				(name "16"
@@ -363,7 +362,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -43.18 0)
 				(length 2.54)
 				(name "17"
@@ -381,7 +380,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -45.72 0)
 				(length 2.54)
 				(name "18"
@@ -399,7 +398,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -48.26 0)
 				(length 2.54)
 				(name "19"
@@ -417,7 +416,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -50.8 0)
 				(length 2.54)
 				(name "20"
@@ -435,7 +434,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -53.34 0)
 				(length 2.54)
 				(name "21"
@@ -453,7 +452,7 @@
 					)
 				)
 			)
-			(pin input line
+			(pin unspecified line
 				(at -5.08 -55.88 0)
 				(length 2.54)
 				(name "22"
