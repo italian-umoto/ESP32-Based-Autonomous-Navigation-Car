@@ -23,3 +23,7 @@ static constexpr int COLLISION_SENSOR_PIN = 9;
 // state transitions
 static constexpr int STATE_INDICATOR_LED = 38;
 static constexpr int STATE_TRANSITION_PIN = 5;
+
+// battery management
+static constexpr int BAT_VOLTAGE_PIN = 3;
+static constexpr int BAT_STATUS_LED_PIN = 11;

@@ -645,7 +645,7 @@
         "uuid": "f1b66af7-d78f-42ec-a39a-db168d7d03b1"
       }
     ],
-    "used_designators": "J_Motor_Left1,J_Motor_Right1,LED_RED_2,#PWR1-19,#PWR27,#PWR46-47,R5-10,R16-18,J3,LED_RED1-2,Q1-2,C1-2,C15,PWR2,ENABLE2,RESET1,D1",
+    "used_designators": "H1-2,#PWR7,#PWR23,R19,PWR3",
     "variants": []
   },
   "sheets": [

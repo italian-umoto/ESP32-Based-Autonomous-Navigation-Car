@@ -689,6 +689,17 @@
 			(uuid "227ee57d-0081-4e4c-8faa-5595b96b89b2")
 		)
 		(embedded_fonts no)
+		(model "${KIPRJMOD}/models/ESP32-S3-DEVKITC-1-N8R2.step"
+			(offset
+				(xyz 0 0 0)
+			)
+			(scale
+				(xyz 1 1 1)
+			)
+			(rotate
+				(xyz -90 -0 -0)
+			)
+		)
 	)
 	(footprint "LED_SMD:LED_0201_0603Metric"
 		(layer "F.Cu")
@@ -1840,6 +1851,17 @@
 				(xyz 0 0 0)
 			)
 		)
+	)
+	(gr_rect
+		(start 120.75 49.5)
+		(end 200.25 139.5)
+		(stroke
+			(width 0.05)
+			(type default)
+		)
+		(fill no)
+		(layer "Edge.Cuts")
+		(uuid "a11de49b-c417-4c2b-a5e7-82805a681a7d")
 	)
 	(embedded_fonts no)
 )
