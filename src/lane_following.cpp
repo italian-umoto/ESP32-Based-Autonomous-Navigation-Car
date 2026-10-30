@@ -106,7 +106,7 @@ LaneStatus laneStep(void) {
     // making the change to the steering the same in both cases which is
     // good because it allows for variation in testing conditions to not
     // require drastically different pid calculations.
-    const float error = (l - r) / (l + r);
+    const float error = l - r;
 
     // Just reacquired the line: prevErr still holds the old search
     // direction, which would make the D term spike, so we set to current err

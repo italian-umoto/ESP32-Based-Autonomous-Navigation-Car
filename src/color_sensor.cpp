@@ -5,18 +5,18 @@
 // I believe that ADC 2 pins can interfere with WiFi
 constexpr int L_SENSOR_PIN = 6;
 constexpr int L_RED_LED_PIN = 16;
-constexpr int L_GREEN_LED_PIN = 7;
-constexpr int L_BLUE_LED_PIN = 15;
+constexpr int L_GREEN_LED_PIN = 11;
+constexpr int L_BLUE_LED_PIN = 12;
 
 // TEMP: idk what pins are free
 constexpr int R_SENSOR_PIN = 10;
-constexpr int R_RED_LED_PIN = 11;
-constexpr int R_GREEN_LED_PIN = 12;
-constexpr int R_BLUE_LED_PIN = 13;
+constexpr int R_RED_LED_PIN = 16;
+constexpr int R_GREEN_LED_PIN = 11;
+constexpr int R_BLUE_LED_PIN = 12;
 
 // These values get updated during testing
-constexpr SensorCal LEFT_CAL = {{40, 60}, {37, 58}, {28, 43}};
-constexpr SensorCal RIGHT_CAL = {{0, 0}, {0, 0}, {0, 0}};
+constexpr SensorCal LEFT_CAL = {{37, 73}, {28, 155}, {29, 77}};
+constexpr SensorCal RIGHT_CAL = {{32, 69}, {28, 171}, {41, 116}};
 
 constexpr int NUM_SAMPLES = 16;
 constexpr int DARK_THRESHOLD = 25;
