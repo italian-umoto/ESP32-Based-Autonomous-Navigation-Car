@@ -31,3 +31,7 @@ void drive_pivot_ccw(float speed);
 void drive_turn_right(float radius_mm);
 void drive_turn_left(float radius_mm);
 
+
+// Call repeatedly with encoder counts captured at state entry.
+// Positive degrees = clockwise; returns true when both wheels finish.
+bool drive_turn(int degrees, int entryLeft, int entryRight);
