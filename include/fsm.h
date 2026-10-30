@@ -13,18 +13,24 @@ public:
     void tick();
 
 private:
+    void handleCommand();
+    void handleManual();
+    void readSensors();
     void transitionTo(State next);
-    bool turn(int degrees); // positive = clockwise, negative = counterclockwise.
-    void followLane(DetectedColor target, DetectedColor observed);
 
+    // TODO change to idle and false later
+    bool solo = true;
     State state = State::CrossOutbound;
     BotRole role = BotRole::Bot1;
-    bool solo = true;
+    DetectedColor primaryColor = DetectedColor::Blue;
+    int turnDirection = -90; 
     uint32_t manualCommand = 0;
     uint32_t manualValue = 0;
+
+    bool wall = false;
+    DetectedColor color = DetectedColor::Dark;
 
     int entryLeft = 0;
     int entryRight = 0;
     int primaryLaneMatches = 0;
-
 };
