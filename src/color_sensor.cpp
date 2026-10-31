@@ -5,7 +5,7 @@
 constexpr int NUM_SAMPLES = 16; // ADC reads averaged per measurement
 constexpr int SETTLE_US = 500;  // wait after switching an LED
 
-constexpr float DARK_INTENSITY_THRESHOLD = 0.70f;
+constexpr float DARK_INTENSITY_THRESHOLD = 0.50f;
 
 struct SensorCalibration {
   float redReference;
@@ -16,8 +16,10 @@ struct SensorCalibration {
 
 // First three values from Raw R on R, Raw G on Y, Raw B on B.
 // The final three are R/G/B measured on the dark track background.
-constexpr SensorCalibration LEFT_CAL = {68, 147, 136, 32, 45, 42};
-constexpr SensorCalibration RIGHT_CAL = {70, 142, 100, 32, 45, 55};
+constexpr SensorCalibration LEFT_CAL = {81.3f, 182.2f, 104.3f,
+                                        43.1f, 54.6f,  49.8f};
+constexpr SensorCalibration RIGHT_CAL = {81.2f, 206.7f, 140.9f,
+                                         43.1f, 54.8f,  60.1f};
 
 static void resetLED() {
   digitalWrite(RED_LED_PIN, LOW);
@@ -92,16 +94,17 @@ DetectedColor classifyColor(const ColorReading &reading) {
   if (reading.intensity <= DARK_INTENSITY_THRESHOLD)
     return DetectedColor::Dark;
 
-  if (reading.red >= 0.50f && reading.green >= 0.22f && reading.blue <= 0.12f)
+  if (reading.red >= 0.50f && reading.green >= 0.16f && reading.blue <= 0.12f)
     return DetectedColor::Yellow;
 
   if (reading.red <= 0.25f && reading.green >= 0.20f && reading.blue >= 0.25f)
     return DetectedColor::Blue;
 
-  if (reading.red >= 0.70f && reading.green <= 0.20f && reading.blue <= 0.20f)
+  if (reading.red >= 0.70f && reading.green <= 0.15f && reading.blue <= 0.20f)
     return DetectedColor::Red;
 
-  return DetectedColor::Dark;
+  else
+    return DetectedColor::Dark;
 }
 
 // strength in [0, 1] of the target color on one sensor, used for lane
@@ -132,7 +135,6 @@ float targetStrength(const ColorReading &reading, DetectedColor target) {
 // -------------------------------------------------------------------
 // debug
 // -------------------------------------------------------------------
-
 const char *colorToString(DetectedColor color) {
   switch (color) {
   case DetectedColor::Dark:

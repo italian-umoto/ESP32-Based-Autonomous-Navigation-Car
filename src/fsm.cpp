@@ -8,12 +8,15 @@
 #include "websocket.h"
 #include <Arduino.h>
 
-static constexpr float FORWARD_CPS = 800;
+static constexpr float FORWARD_CPS = 1300;
 static constexpr int CONFIRM_READS = 2;
 // Forward duration before alignment. Starting estimate for about 3 inches;
 // tune on the bot at FORWARD_CPS.
-static constexpr uint32_t ALIGN_ADVANCE_MS = 1700;
+static constexpr int ALIGN_ADVANCE_COUNTS = 600;
 static constexpr int TURNAROUND_DEG = 180;
+
+// The bot is not perpendicular to the wall, so it needs to turn a little more
+static constexpr int TURN_YELLOW_DEG = 140;
 
 // websocket commands / manualCommand values
 static constexpr int CMD_STOP = 0;
@@ -231,6 +234,7 @@ void FSM::transitionTo(State next) {
   entryLeft = left_encoder_count();
   entryRight = right_encoder_count();
   laneMatches = 0;
+  resetLaneFollowing();
 
   Serial.printf("State -> %s\n", stateName(next));
   showState();
@@ -265,8 +269,12 @@ void FSM::searchForLane(DetectedColor color, State next, bool stopAtWall) {
 }
 
 // this is to put the robot over the line it just found
+// Drive straight ALIGN_ADVANCE_COUNTS, then go to `next`
 void FSM::advanceThen(State next) {
-  if (millis() - stateEntryMs < ALIGN_ADVANCE_MS)
+  const int traveled = (abs(left_encoder_count() - entryLeft) +
+                        abs(right_encoder_count() - entryRight)) /
+                       2;
+  if (traveled < ALIGN_ADVANCE_COUNTS)
     drive_forward(FORWARD_CPS);
   else
     transitionTo(next);

@@ -8,9 +8,9 @@ static constexpr float RIGHT_WHEEL_DIR = 1;
 static constexpr float ARC_TURN_CPS = 200;
 
 // drive_turn: encoder counts per wheel for a 90 degree turn (measured)
-static constexpr int COUNTS_PER_90 = 1000;
+static constexpr int COUNTS_PER_90 = 1070;
 // drive_turn: wheel speed while turning in place
-static constexpr float TURN_IN_PLACE_CPS = 600;
+static constexpr float TURN_IN_PLACE_CPS = 1000;
 
 void drive_wheels(float left_cps, float right_cps) {
   // scale both down together so neither goes over the max

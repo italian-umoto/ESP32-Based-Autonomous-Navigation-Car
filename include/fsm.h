@@ -46,7 +46,7 @@ private:
   bool buttonPressed();
   void showState();
 
-  // Mode and state
+  // mode and state
   bool solo = false;
   State state = State::Idle;
   uint32_t manualCommand = 0;
