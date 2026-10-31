@@ -6,8 +6,8 @@ class FSM {
 public:
     enum class BotRole { Bot1, Bot2 };
     enum class State {
-        Idle, CrossOutbound, TurnBack, FindPrimaryLane, AlignWithPrimaryLane,
-        FollowPrimaryLane, TurnTowardYellow, FindYellowLane, AlignWithYellowLane,
+        Idle, CrossOutbound, TurnBack, FindPrimaryLane, AdvancePrimaryLane, AlignWithPrimaryLane,
+        FollowPrimaryLane, TurnTowardYellow, FindYellowLane, AdvanceYellowLane, AlignWithYellowLane,
         FollowYellowLane, TurnTowardHome, CrossHome, Complete
     };
     void tick();
@@ -19,8 +19,8 @@ private:
     void transitionTo(State next);
 
     // TODO change to idle and false later
-    bool solo = true;
-    State state = State::CrossOutbound;
+    bool solo = false;
+    State state = State::Idle;
     BotRole role = BotRole::Bot1;
     DetectedColor primaryColor = DetectedColor::Blue;
     int turnDirection = -90; 
@@ -28,9 +28,12 @@ private:
     uint32_t manualValue = 0;
 
     bool wall = false;
-    DetectedColor color = DetectedColor::Dark;
+    ColorReadings readings{};
+    DetectedColor leftColor = DetectedColor::Dark;
+    DetectedColor rightColor = DetectedColor::Dark;
 
+    uint32_t stateEntryMs = 0;
     int entryLeft = 0;
     int entryRight = 0;
-    int primaryLaneMatches = 0;
+    int laneMatches = 0;
 };

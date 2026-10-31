@@ -7,6 +7,7 @@ struct colorReading{
     int rawRed;
     int rawGreen;
     int rawBlue;
+    float intensity; // Sum of calibrated channels before chromatic normalization.
 };
 
 enum class DetectedColor{
@@ -18,10 +19,13 @@ enum class DetectedColor{
 };
 
 void colorInit();
-colorReading single_read ();
+struct ColorReadings {
+    colorReading left;
+    colorReading right;
+};
+
+ColorReadings readColors();
+float targetStrength(const colorReading& reading, DetectedColor target);
 DetectedColor classifyColor(const colorReading& reading);
 const char* colorToString(DetectedColor color);
 void printReading(const colorReading& reading, DetectedColor color);
-void resetLED();
-int readAverage();
-int readReflection(int ledPin);

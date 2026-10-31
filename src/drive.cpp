@@ -9,7 +9,7 @@
 #define DRIVE_TURN_SPEED 200
 
 // Empirically measured encoder counts per wheel for a 90-degree turn
-static constexpr int COUNTS_PER_90 = 850;
+static constexpr int COUNTS_PER_90 = 1000;
 static constexpr float TURN_CPS = 600;
 
 // Scale down the inputs to clamp in the max CPS
@@ -59,7 +59,7 @@ static void drive_arc(float speed, float radius_mm, bool right)
 void drive_turn_right(float radius_mm) { drive_arc(DRIVE_TURN_SPEED, radius_mm, true);  }
 void drive_turn_left (float radius_mm) { drive_arc(DRIVE_TURN_SPEED, radius_mm, false); }
 
-// turn and stop after n degrees
+// Turn and stop after n degrees.
 bool drive_turn(int degrees, int entryLeft, int entryRight) {
     int target = COUNTS_PER_90 * abs(degrees) / 90;
     int left = abs(left_encoder_count() - entryLeft);
@@ -68,7 +68,7 @@ bool drive_turn(int degrees, int entryLeft, int entryRight) {
         drive_stop();
         return true;
     }
-    // stop each wheel at its target while the other finishes the pivot.
+    // Stop each wheel at its target while the other finishes the pivot.
     const float leftSpeed = left >= target ? 0 : (degrees > 0 ? TURN_CPS : -TURN_CPS);
     const float rightSpeed = right >= target ? 0 : (degrees > 0 ? -TURN_CPS : TURN_CPS);
     drive_wheels(leftSpeed, rightSpeed);

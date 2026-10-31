@@ -17,4 +17,3 @@ void setup() {
 void loop() {
     fsm.tick();
 }
-

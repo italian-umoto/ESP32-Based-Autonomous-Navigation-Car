@@ -11,10 +11,11 @@ static constexpr int RIGHT_A = 2;
 static constexpr int RIGHT_B = 1;
 
 // color sensor and visible LEDs
-static constexpr int COLOR_SENSOR_PIN = 6;
+static constexpr int LEFT_COLOR_SENSOR_PIN = 6;
+static constexpr int RIGHT_COLOR_SENSOR_PIN = 10;
 static constexpr int RED_LED_PIN = 16;
-static constexpr int GREEN_LED_PIN = 7;
-static constexpr int BLUE_LED_PIN = 15;
+static constexpr int GREEN_LED_PIN = 11;
+static constexpr int BLUE_LED_PIN = 12;
 
 // collision detection
 static constexpr int IR_LED_PIN = 8;

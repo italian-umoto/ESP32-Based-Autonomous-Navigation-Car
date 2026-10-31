@@ -3,106 +3,107 @@
 #include <Arduino.h>
 
 constexpr int NUM_SAMPLES = 16;
+constexpr int SETTLE_US = 500;
+// Measured dark intensity: 0.315-0.401; dimmest lane sample: 1.429.
+constexpr float DARK_INTENSITY_THRESHOLD = 0.70f;
 
-// TODO change calibration values if we change chasis or color sensors
-// still not really working, color sensors are inconsistent
+struct SensorCalibration {
+    float redReference;   
+    float yellowGreenReference; 
+    float blueReference;  
+    float darkR, darkG, darkB;
+};
 
-// LED calibration references
-constexpr float WHITE_R = 107.0f;
-constexpr float WHITE_G = 55.0f;
-constexpr float WHITE_B = 51.0f;
-constexpr float DARK_R = 25.0f;
-constexpr float DARK_G = 12.0f;
-constexpr float DARK_B = 6.0f;
-constexpr int DARK_TOTAL_THRESHOLD = 60;
+// Color calibration:
+// First three values from Raw R on R, Raw G on Y, Raw B on B.
+// The final three are R/G/B measured on the dark track background.
+constexpr SensorCalibration LEFT_CAL = {68, 147, 136, 32, 45, 42};
+constexpr SensorCalibration RIGHT_CAL = {70, 142, 100, 32, 45, 55};
+
+static void resetLED() {
+    digitalWrite(RED_LED_PIN, LOW);
+    digitalWrite(GREEN_LED_PIN, LOW);
+    digitalWrite(BLUE_LED_PIN, LOW);
+}
 
 void colorInit() {
     pinMode(RED_LED_PIN, OUTPUT);
     pinMode(GREEN_LED_PIN, OUTPUT);
     pinMode(BLUE_LED_PIN, OUTPUT);
-
+    pinMode(LEFT_COLOR_SENSOR_PIN, INPUT);
+    pinMode(RIGHT_COLOR_SENSOR_PIN, INPUT);
     resetLED();
-
-    // ADC range: 0-4095
     analogReadResolution(12);
-
-    // Allow measurement of higher input voltages.
-    analogSetPinAttenuation(COLOR_SENSOR_PIN, ADC_11db);
+    analogSetPinAttenuation(LEFT_COLOR_SENSOR_PIN, ADC_11db);
+    analogSetPinAttenuation(RIGHT_COLOR_SENSOR_PIN, ADC_11db);
 }
 
-void resetLED() {
-    digitalWrite(RED_LED_PIN, LOW);
-    digitalWrite(GREEN_LED_PIN, LOW);
-    digitalWrite(BLUE_LED_PIN, LOW);
-};
+struct SensorPair { int left, right; };
 
-int readAverage() {
-    long total = 0;
-
-    for (int i = 0; i < NUM_SAMPLES; i++) {
-        total += analogRead(COLOR_SENSOR_PIN);
+static SensorPair readAverage() {
+    long left = 0, right = 0;
+    for (int i = 0; i < NUM_SAMPLES; ++i) {
+        left += analogRead(LEFT_COLOR_SENSOR_PIN);
+        right += analogRead(RIGHT_COLOR_SENSOR_PIN);
         delayMicroseconds(100);
     }
+    return {int(left / NUM_SAMPLES), int(right / NUM_SAMPLES)};
+}
 
-    return total / NUM_SAMPLES;
-};
-
-int readReflection(int ledPin) {
-    resetLED();
-
-    delayMicroseconds(500);
-    const int ambient = readAverage();
-
+static SensorPair readReflection(int ledPin, const SensorPair& ambient) {
     digitalWrite(ledPin, HIGH);
-
-    const int illuminated = readAverage();
+    delayMicroseconds(SETTLE_US);
+    const SensorPair illuminated = readAverage();
     digitalWrite(ledPin, LOW);
-    return max(0, illuminated - ambient);
-};
+    return {max(0, illuminated.left - ambient.left), max(0, illuminated.right - ambient.right)};
+}
 
-colorReading single_read () {
+static float calibrate(int raw, float dark, float reference) {
+    return reference > dark ? max(0.0f, (raw - dark) / (reference - dark)) : 0.0f;
+}
 
-    const int red = readReflection(RED_LED_PIN);
-    const int green = readReflection(GREEN_LED_PIN);
-    const int blue = readReflection(BLUE_LED_PIN);
+static colorReading calibratedReading(int red, int green, int blue,
+                                      const SensorCalibration& cal) {
+    const float r = calibrate(red, cal.darkR, cal.redReference);
+    const float g = calibrate(green, cal.darkG, cal.yellowGreenReference);
+    const float b = calibrate(blue, cal.darkB, cal.blueReference);
+    const float total = r + g + b;
+    if (total <= 0)
+        return {0, 0, 0, red, green, blue, 0};
+    return {r / total, g / total, b / total, red, green, blue, total};
+}
 
-    // remove each channel's dark offset and scale its white reference to one
-    // clamp negative results so readings below each dark reference stay at 0
-    const float calibratedRed = max(0.0f, (red - DARK_R) / (WHITE_R - DARK_R));
-    const float calibratedGreen = max(0.0f, (green - DARK_G) / (WHITE_G - DARK_G));
-    const float calibratedBlue = max(0.0f, (blue - DARK_B) / (WHITE_B - DARK_B));
-    const float total = calibratedRed + calibratedGreen + calibratedBlue;
-    if (total == 0.0f) return {0.0f, 0.0f, 0.0f, red, green, blue};
+ColorReadings readColors() {
+    resetLED();
+    delayMicroseconds(SETTLE_US);
+    const SensorPair ambient = readAverage();
+    const SensorPair red = readReflection(RED_LED_PIN, ambient);
+    const SensorPair green = readReflection(GREEN_LED_PIN, ambient);
+    const SensorPair blue = readReflection(BLUE_LED_PIN, ambient);
+    resetLED();
+    return {calibratedReading(red.left, green.left, blue.left, LEFT_CAL),
+            calibratedReading(red.right, green.right, blue.right, RIGHT_CAL)};
+}
 
-    return {calibratedRed / total, calibratedGreen / total, calibratedBlue / total,
-            red, green, blue};
-};
+DetectedColor classifyColor(const colorReading& reading) {
+    if (reading.intensity <= DARK_INTENSITY_THRESHOLD)
+        return DetectedColor::Dark;
 
-DetectedColor classifyColor(const colorReading& reading){
-    
-    const int totalRaw = reading.rawRed + reading.rawGreen + reading.rawBlue;
-    if (totalRaw <= DARK_TOTAL_THRESHOLD) return DetectedColor::Dark;
-
-    // approx equal normalized channels
-    if (reading.red >= 0.25f && reading.red <= 0.42f &&
-        reading.green >= 0.25f && reading.green <= 0.42f &&
-        reading.blue >= 0.25f && reading.blue <= 0.42f)
-        return DetectedColor::White;
-
-    if (reading.blue >= 0.40f && reading.blue > reading.red &&
-        reading.blue > reading.green)
-        return DetectedColor::Blue;
-
-    if (reading.blue <= 0.20f && reading.red >= 0.48f &&
-        reading.red > reading.green * 1.35f)
-        return DetectedColor::Red;
-
-    if (reading.blue <= 0.20f && reading.red >= 0.34f &&
-        reading.green >= 0.32f && reading.red <= reading.green * 1.35f)
+    // Both sensors on yellow: R=0.632-0.699, G=0.290-0.342, B=0.007-0.031.
+    // Yellow is red-dominant with this calibration, so R > G alone is not red.
+    if (reading.red >= 0.50f && reading.green >= 0.22f && reading.blue <= 0.12f)
         return DetectedColor::Yellow;
 
+    // Left blue is green-dominant: R=0.171-0.188, B=0.327-0.348.
+    // Right blue has R=0.092-0.116, B=0.557-0.588. Blue need not exceed G.
+    if (reading.red <= 0.25f && reading.green >= 0.20f && reading.blue >= 0.25f)
+        return DetectedColor::Blue;
+
+    // Both sensors on red: R=0.761-0.866, G=0.082-0.105, B=0.050-0.135.
+    if (reading.red >= 0.70f && reading.green <= 0.20f && reading.blue <= 0.20f)
+        return DetectedColor::Red;
     return DetectedColor::Dark;
-};
+}
 
 const char* colorToString(DetectedColor color) {
     switch (color) {
@@ -112,13 +113,31 @@ const char* colorToString(DetectedColor color) {
         case DetectedColor::Blue: return "Blue";
         case DetectedColor::White: return "White";
     }
-
     return "Unknown";
 };
 
 void printReading(const colorReading& reading, DetectedColor color) {
-    Serial.printf("Raw R:%4d G:%4d B:%4d  Normalized R:%5.3f G:%5.3f B:%5.3f  color:%-6s\n",
+    Serial.printf("Raw R:%4d G:%4d B:%4d  Normalized R:%5.3f G:%5.3f B:%5.3f  intensity:%5.3f  color:%-6s\n",
                   reading.rawRed, reading.rawGreen, reading.rawBlue,
-                  reading.red, reading.green, reading.blue, colorToString(color));
+                  reading.red, reading.green, reading.blue, reading.intensity, colorToString(color));
 };
 
+// Return strength = [0,1] of the target color on both sensors, used for lane following
+float targetStrength(const colorReading& reading, DetectedColor target) {
+    if (target == DetectedColor::Dark || classifyColor(reading) != target) return 0;
+
+    // contrast calculations empirically 
+    float contrast = 0;
+    switch (target) {
+        case DetectedColor::Red:
+            contrast = reading.red - max(reading.green, reading.blue); break;
+        case DetectedColor::Blue:
+            contrast = reading.blue - reading.red; break; // compare blue and red since green will be high
+        case DetectedColor::Yellow:
+            contrast = 2.0f * (min(reading.red, reading.green) - reading.blue); break; // compare either red or green to blue and scale up reading
+        default:
+            return 0;
+    }
+    // Arduino function: contrain(x, a, b) returns a if x<a, b if x>b, and x otherwise
+    return constrain(contrast * reading.intensity, 0.0f, 1.0f);
+}
