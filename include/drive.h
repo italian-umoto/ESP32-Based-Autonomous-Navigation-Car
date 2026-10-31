@@ -1,37 +1,40 @@
-// Units:
-//   speed  : encoder counts per second
-//   radius : mm, from the turn center to the middle of the robot.
 #pragma once
 
-// Distance between the wheels
-#define DRIVE_TRACK_WIDTH_MM   150.0f
+constexpr float DRIVE_TRACK_WIDTH_MM = 150.0f;
+constexpr float DRIVE_MAX_WHEEL_CPS = 1300.0f;
 
-// Highest cps the motors can reliably hold under load. (This is conservative)
-// This was taking 75% of what the encoder count was at BDC_MCPWM_DUTY_TICK_MAX - 1
-#define DRIVE_MAX_WHEEL_CPS    1300.0f
+void drive_wheels(float left_cps, float right_cps);
 
-
-/* drive_stop/forward/backward/pivot cw,ccw/turn left,right
+/* drive_stop / forward / backward / pivot_cw / pivot_ccw
  *
  * Does what it says on the can
  *
- * Params: speed     - speed (in cps) for both motors on forward/backward
- *                     speed of robot on an arc for pivots/turns
- *
- *         radius_mm - the radius of the turn arc
- *
- * Effects: Will cause robot to move (or stop moving)
+ * Param: speed - cps for each wheel (sign is ignored)
  */
-void drive_wheels(float left_cps, float right_cps);
 void drive_stop(void);
 void drive_forward(float speed);
 void drive_backward(float speed);
 void drive_pivot_cw(float speed);
 void drive_pivot_ccw(float speed);
+
+/* drive_turn_right / drive_turn_left
+ *
+ * Drive along an arc at ARC_TURN_CPS (see drive.cpp)
+ *
+ * Param: radius_mm - radius of the arc. Under 1 mm pivots in place
+ */
 void drive_turn_right(float radius_mm);
 void drive_turn_left(float radius_mm);
 
-
-// Call repeatedly with encoder counts captured at state entry.
-// Positive degrees = clockwise; returns true when both wheels finish.
-bool drive_turn(int degrees, int entryLeft, int entryRight);
+/* drive_turn
+ *
+ * Turn in place by a number of degrees, measured with the encoders.
+ * Call once per tick until it returns true
+ *
+ * Params: degrees    - how far to turn (positive -> clockwise)
+ *         startLeft  - left encoder count when the turn started
+ *         startRight - right encoder count when the turn started
+ *
+ * Return: true -and stops- once both wheels have turned far enough
+ */
+bool drive_turn(int degrees, int startLeft, int startRight);

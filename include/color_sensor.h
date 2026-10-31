@@ -1,31 +1,36 @@
 #pragma once
 
-struct colorReading{
-    float red;
-    float green;
-    float blue;
-    int rawRed;
-    int rawGreen;
-    int rawBlue;
-    float intensity; // Sum of calibrated channels before chromatic normalization.
+struct ColorReading {
+  float red;
+  float green;
+  float blue;
+  int rawRed; // ambient-subtracted ADC value under the red LED
+  int rawGreen;
+  int rawBlue;
+  float intensity;
 };
 
-enum class DetectedColor{
-    Dark,
-    Red,
-    Yellow,
-    Blue,
-    White
+struct ColorReadings {
+  ColorReading left;
+  ColorReading right;
+};
+
+enum class DetectedColor {
+  Dark,
+  Red,
+  Yellow,
+  Blue,
+  White // not currently returned by classifyColor
 };
 
 void colorInit();
-struct ColorReadings {
-    colorReading left;
-    colorReading right;
-};
-
 ColorReadings readColors();
-float targetStrength(const colorReading& reading, DetectedColor target);
-DetectedColor classifyColor(const colorReading& reading);
-const char* colorToString(DetectedColor color);
-void printReading(const colorReading& reading, DetectedColor color);
+// which color one sensor is on
+DetectedColor classifyColor(const ColorReading &reading);
+
+// gives strength reading 0-1 for lane following
+float targetStrength(const ColorReading &reading, DetectedColor target);
+
+// debug
+const char *colorToString(DetectedColor color);
+void printReading(const ColorReading &reading, DetectedColor color);
