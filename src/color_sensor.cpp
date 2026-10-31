@@ -15,8 +15,8 @@ constexpr int R_GREEN_LED_PIN = 11;
 constexpr int R_BLUE_LED_PIN = 12;
 
 // These values get updated during testing
-constexpr SensorCal LEFT_CAL = {{37, 73}, {28, 155}, {29, 77}};
-constexpr SensorCal RIGHT_CAL = {{32, 69}, {28, 171}, {41, 116}};
+constexpr SensorCal LEFT_CAL = {{32, 68}, {45, 147}, {42, 136}};
+constexpr SensorCal RIGHT_CAL = {{32, 70}, {45, 142}, {55, 100}};
 
 constexpr int NUM_SAMPLES = 16;
 constexpr int DARK_THRESHOLD = 25;
@@ -127,30 +127,25 @@ colorReading ColorSensor::singleRead() {
 
 // Main color detection logic
 DetectedColor ColorSensor::classifyColor(const colorReading &reading) {
+  constexpr int DARK_MAX = 87;    // TUNABLE: darks peak ≤ ~78, red ≥ ~94
+  constexpr int DARK_SPREAD = 20; // TUNABLE: catches bright, flat darks
 
-  const int brightest = max(reading.red, max(reading.green, reading.blue));
+  const int hi = max(reading.red, max(reading.green, reading.blue));
+  const int lo = min(reading.red, min(reading.green, reading.blue));
 
-  if (brightest < DARK_THRESHOLD)
+  // Dark if nothing is bright, or everything is about equally bright
+  if (hi < DARK_MAX || hi - lo < DARK_SPREAD)
     return DetectedColor::Dark;
 
-  const bool red = reading.red > 10 && reading.blue < 10 && reading.green < 10;
-
-  const bool blue = reading.blue > reading.red * COLOR_DOMINANCE &&
-                    reading.blue > reading.green * COLOR_DOMINANCE;
-
-  const bool yellow = reading.red > reading.blue * COLOR_DOMINANCE &&
-                      reading.green > reading.blue * COLOR_DOMINANCE;
-
-  if (red)
-    return DetectedColor::Red;
-  if (yellow)
-    return DetectedColor::Yellow;
-  if (blue)
+  // Blue barely reflects red; red and yellow reflect it strongly
+  if (reading.blue > reading.red)
     return DetectedColor::Blue;
-  if (brightest > WHITE_THRESHOLD)
-    return DetectedColor::White;
-  // Dark returned as default
-  return DetectedColor::Dark;
+
+  // Yellow reflects more green than red; red doesn't
+  if (reading.green > reading.red)
+    return DetectedColor::Yellow;
+
+  return DetectedColor::Red;
 }
 
 static const char *colorToString(DetectedColor color) {
