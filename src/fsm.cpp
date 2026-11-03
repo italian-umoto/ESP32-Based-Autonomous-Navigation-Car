@@ -131,8 +131,8 @@ void FSM::readSensors() {
   printReading(readings.left, leftColor);
   Serial.print("Right: ");
   printReading(readings.right, rightColor);
-  Serial.printf("Collision reflected: %d, wall: %d\n", collision.reflected,
-                wall);
+  // Serial.printf("Collision reflected: %d, wall: %d\n", collision.reflected,
+  //               wall);
 }
 
 void FSM::handleManual() {

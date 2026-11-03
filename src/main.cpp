@@ -15,4 +15,17 @@ void setup() {
   delay(3000);
 }
 
-void loop() { fsm.tick(); }
+void loop() {
+  fsm.tick();
+  delay(500);
+}
+
+// void setup() {
+//   Serial.begin(115200);
+//   colorInit();
+// }
+//
+// void loop() {
+//   fsm.readSensors();
+//   delay(500);
+// }

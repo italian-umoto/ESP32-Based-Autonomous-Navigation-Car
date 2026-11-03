@@ -25,9 +25,10 @@ public:
   void begin();
   void tick();
 
+  void readSensors();
+
 private:
   void handleCommand();
-  void readSensors();
   void handleManual();
   void runRoute();
 

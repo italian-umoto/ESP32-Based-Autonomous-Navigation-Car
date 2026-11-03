@@ -1,7 +1,7 @@
 #pragma once
 #include "color_sensor.h"
 
-#define BOT_ID 2
+#define BOT_ID 1
 
 #if BOT_ID == 1
 constexpr DetectedColor PRIMARY = DetectedColor::Red;
