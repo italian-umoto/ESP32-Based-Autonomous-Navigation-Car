@@ -7,9 +7,6 @@ constexpr int SETTLE_US = 500;  // wait after switching an LED
 
 constexpr float DARK_INTENSITY_THRESHOLD = 0.50f;
 
-constexpr int DETECTED_RED =    ? ;
-constexpr int DETECTED_BLUE =   ? ;
-constexpr int DETECTED_YELLOW = ? ;
 
 struct SensorCalibration {
   float redReference, yellowGreenReference, blueReference, darkR, darkG, darkB;
@@ -17,10 +14,8 @@ struct SensorCalibration {
 
 // First three values from Raw R on R, Raw G on Y, Raw B on B.
 // The final three are R/G/B measured on the dark track background.
-constexpr SensorCalibration LEFT_CAL = {81.3f, 182.2f, 104.3f,
-                                        43.1f, 54.6f,  49.8f};
-constexpr SensorCalibration RIGHT_CAL = {81.2f, 206.7f, 140.9f,
-                                         43.1f, 54.8f,  60.1f};
+constexpr SensorCalibration LEFT_CAL = {81.3f, 182.2f, 104.3f, 43.1f, 54.6f,  49.8f};
+constexpr SensorCalibration RIGHT_CAL = {81.2f, 206.7f, 140.9f, 43.1f, 54.8f,  60.1f};
 
 static void resetLED() {
   digitalWrite(RED_LED_PIN, LOW);
@@ -38,11 +33,6 @@ void colorInit() {
   analogReadResolution(12);
   analogSetPinAttenuation(LEFT_COLOR_SENSOR_PIN, ADC_11db);
   analogSetPinAttenuation(RIGHT_COLOR_SENSOR_PIN, ADC_11db);
-
-  // PINS FOR LED COLORS ON DETECTION
-  pinMode(DETECTED_RED, LOW);
-  pinMode(DETECTED_BLUE, LOW);
-  pinMode(DETECTED_YELLOW, LOW);
 }
 
 struct SensorPair {
@@ -89,24 +79,7 @@ ColorReadings readColors() {
   resetLED();
   return {calibratedReading(red.left, green.left, blue.left, LEFT_CAL),
           calibratedReading(red.right, green.right, blue.right, RIGHT_CAL)};
-}
-
-void setDetectedLed(DetectedColor color) {
-  resetLED();
-  switch (color) {
-  case DetectedColor::Red:
-    digitalWrite(DETECTED_RED, HIGH);
-  case DetectedColor::Blue:
-    digitalWrite(DETECTED_BLUE, HIGH);
-  case DetectedColor::Yellow:
-    digitalWrite(DETECTED_YELLOW, HIGH);
-  case DetectedColor::Dark: {
-    digitalWrite(DETECTED_RED, HIGH);
-    digitalWrite(DETECTED_BLUE, HIGH);
-    digitalWrite(DETECTED_YELLOW, HIGH);
   }
-  }
-}
 
 DetectedColor classifyColor(const ColorReading &reading) {
   // intensity is calibrated r + g + b 
@@ -114,17 +87,14 @@ DetectedColor classifyColor(const ColorReading &reading) {
     return DetectedColor::Dark;
 
   if (reading.red >= 0.50f && reading.green >= 0.16f && reading.blue <= 0.12f) {
-    setDetectedLed(DetectedColor::Yellow);
     return DetectedColor::Yellow;
   }
 
   if (reading.red <= 0.25f && reading.green >= 0.20f && reading.blue >= 0.25f) {
-    setDetectedLed(DetectedColor::Blue);
     return DetectedColor::Blue;
   }
 
   if (reading.red >= 0.70f && reading.green <= 0.15f && reading.blue <= 0.20f) {
-    setDetectedLed(DetectedColor::Red);
     return DetectedColor::Red;
   }
 
