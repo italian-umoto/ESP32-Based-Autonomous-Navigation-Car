@@ -90,10 +90,8 @@ void FSM::begin() {
 void FSM::tick() {
   handleCommand();
   readSensors();
-  if (solo)
-    runRoute();
-  else
-    handleManual();
+  if (solo) runRoute();
+  else handleManual();
 }
 
 void FSM::handleCommand() {
@@ -131,15 +129,12 @@ void FSM::readSensors() {
   printReading(readings.left, leftColor);
   Serial.print("Right: ");
   printReading(readings.right, rightColor);
-  // Serial.printf("Collision reflected: %d, wall: %d\n", collision.reflected,
-  //               wall);
+//  Serial.printf("Collision reflected: %d, wall: %d\n", collision.reflected, wall);
 }
 
 void FSM::handleManual() {
   // a wall cancels whatever manual command was running
-  if (wall)
-    manualCommand = manualValue = 0;
-
+  if (wall) manualCommand = manualValue = 0;
   switch (manualCommand) {
   case CMD_FORWARD:
     drive_forward(manualValue);
@@ -172,7 +167,6 @@ void FSM::runRoute() {
   case State::Complete:
     drive_stop();
     break;
-
   // ALL OF THESE ARE TAKING NEXT STATE AS A PARAM
   // go forward -> turn around -> find the primary lane
   case State::CrossOutbound:
@@ -193,8 +187,6 @@ void FSM::runRoute() {
   case State::FollowPrimaryLane:
     followLaneUntilWall(PRIMARY, State::TurnTowardYellow);
     break;
-
-  // go to yellow lane
   case State::TurnTowardYellow:
     turnThen(TURN_DEG, State::FindYellowLane);
     break;
@@ -210,8 +202,6 @@ void FSM::runRoute() {
   case State::FollowYellowLane:
     followLaneUntilWall(DetectedColor::Yellow, State::TurnTowardHome);
     break;
-
-  // go home
   case State::TurnTowardHome:
     turnThen(TURN_DEG, State::CrossHome);
     break;
@@ -245,17 +235,15 @@ void FSM::transitionTo(State next) {
 // -------------------------------------------------------------------
 
 void FSM::driveUntilWall(State next) {
-  if (wall)
-    transitionTo(next);
-  else
-    drive_forward(FORWARD_CPS);
+  if (wall) transitionTo(next);
+  else drive_forward(FORWARD_CPS);
 }
 
 void FSM::turnThen(int degrees, State next) {
-  if (drive_turn(degrees, entryLeft, entryRight))
-    transitionTo(next);
+  if (drive_turn(degrees, entryLeft, entryRight)) transitionTo(next);
 }
 
+// why do we need a stop at wall param
 void FSM::searchForLane(DetectedColor color, State next, bool stopAtWall) {
   const bool seen = (leftColor == color || rightColor == color);
   laneMatches = seen ? laneMatches + 1 : 0;

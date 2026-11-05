@@ -12,10 +12,7 @@ constexpr int DETECTED_BLUE =   ? ;
 constexpr int DETECTED_YELLOW = ? ;
 
 struct SensorCalibration {
-  float redReference;
-  float yellowGreenReference;
-  float blueReference;
-  float darkR, darkG, darkB;
+  float redReference, yellowGreenReference, blueReference, darkR, darkG, darkB;
 };
 
 // First three values from Raw R on R, Raw G on Y, Raw B on B.
@@ -71,17 +68,12 @@ static SensorPair readReflection(int ledPin, const SensorPair &ambient) {
           max(0, illuminated.right - ambient.right)};
 }
 
-// map raw so dark background -> 0 and the reference color -> 1
-static float calibrate(int raw, float dark, float reference) {
-  return reference > dark ? max(0.0f, (raw - dark) / (reference - dark)) : 0.0f;
-}
-
-static ColorReading calibratedReading(int red, int green, int blue,
-                                      const SensorCalibration &cal) {
-  const float r = calibrate(red, cal.darkR, cal.redReference);
-  const float g = calibrate(green, cal.darkG, cal.yellowGreenReference);
-  const float b = calibrate(blue, cal.darkB, cal.blueReference);
+static ColorReading calibratedReading(int red, int green, int blue, const SensorCalibration &cal) {
+  const float r = max(0.0f, (red - cal.darkR) / (cal.redReference - cal.darkR));
+  const float g = max(0.0f, (green - cal.darkG) / (cal.yellowGreenReference - cal.darkG));
+  const float b = max(0.0f, (blue - cal.darkB) / (cal.blueReference - cal.darkB));
   const float total = r + g + b;
+  // when all three readings are below the corresponding darkX threshold
   if (total <= 0)
     return {0, 0, 0, red, green, blue, 0};
   return {r / total, g / total, b / total, red, green, blue, total};
@@ -117,6 +109,7 @@ void setDetectedLed(DetectedColor color) {
 }
 
 DetectedColor classifyColor(const ColorReading &reading) {
+  // intensity is calibrated r + g + b 
   if (reading.intensity <= DARK_INTENSITY_THRESHOLD)
     return DetectedColor::Dark;
 
@@ -177,16 +170,16 @@ const char *colorToString(DetectedColor color) {
     return "Yellow";
   case DetectedColor::Blue:
     return "Blue";
-  case DetectedColor::White:
-    return "White";
   }
   return "Unknown";
 }
 
 void printReading(const ColorReading &reading, DetectedColor color) {
-  Serial.printf("Raw R:%4d G:%4d B:%4d  Normalized R:%5.3f G:%5.3f B:%5.3f  "
-                "intensity:%5.3f  color:%-6s\n",
-                reading.rawRed, reading.rawGreen, reading.rawBlue, reading.red,
-                reading.green, reading.blue, reading.intensity,
-                colorToString(color));
+//   Serial.printf("Raw R:%4d G:%4d B:%4d  Normalized R:%5.3f G:%5.3f B:%5.3f  "
+//                 "intensity:%5.3f  color:%-6s\n",
+//                 reading.rawRed, reading.rawGreen, reading.rawBlue, reading.red,
+//                 reading.green, reading.blue, reading.intensity,
+//                 colorToString(color));
+    Serial.printf("Normalized R:%5.3f G:%5.3f B:%5.3f intensity:%5.3f color:%-6s\n", 
+                  reading.red, reading.green, reading.blue, reading.intensity, colorToString(color));
 }

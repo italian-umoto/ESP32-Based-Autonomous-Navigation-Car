@@ -20,7 +20,6 @@ enum class DetectedColor {
   Red,
   Yellow,
   Blue,
-  White // not currently returned by classifyColor
 };
 
 void colorInit();
