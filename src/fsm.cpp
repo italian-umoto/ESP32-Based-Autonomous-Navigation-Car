@@ -8,6 +8,8 @@
 #include "websocket.h"
 #include <Arduino.h>
 
+const char *CLIENT_ID_FSM = "MAGICSMOKE67";
+
 static constexpr float FORWARD_CPS = 1300;
 static constexpr int CONFIRM_READS = 2;
 // Forward duration before alignment. Starting estimate for about 3 inches;
@@ -90,8 +92,10 @@ void FSM::begin() {
 void FSM::tick() {
   handleCommand();
   readSensors();
-  if (solo) runRoute();
-  else handleManual();
+  if (solo)
+    runRoute();
+  else
+    handleManual();
 }
 
 void FSM::handleCommand() {
@@ -116,7 +120,8 @@ void FSM::handleCommand() {
   }
 }
 
-// store readings for this tick's collision and color checks
+static constexpr uint32_t TELEMETRY_PERIOD_MS = 1000;
+
 void FSM::readSensors() {
   const CollisionReading collision = readCollisionDetection();
   wall = collision.imminent_collision;
@@ -125,16 +130,23 @@ void FSM::readSensors() {
   leftColor = classifyColor(readings.left);
   rightColor = classifyColor(readings.right);
 
-  Serial.print("Left:  ");
-  printReading(readings.left, leftColor);
-  Serial.print("Right: ");
-  printReading(readings.right, rightColor);
-//  Serial.printf("Collision reflected: %d, wall: %d\n", collision.reflected, wall);
+  static uint32_t lastTelemetryMs = 0;
+  const uint32_t now = millis();
+  if (now - lastTelemetryMs >= TELEMETRY_PERIOD_MS) {
+    lastTelemetryMs = now;
+    char msg[192];
+    snprintf(msg, sizeof msg, "%s color: L=%d,%d,%d R=%d,%d,%d", CLIENT_ID_FSM,
+             readings.left.rawRed, readings.left.rawGreen,
+             readings.left.rawBlue, readings.right.rawRed,
+             readings.right.rawGreen, readings.right.rawBlue);
+    publishTelemetry(msg);
+  }
 }
 
 void FSM::handleManual() {
   // a wall cancels whatever manual command was running
-  if (wall) manualCommand = manualValue = 0;
+  if (wall)
+    manualCommand = manualValue = 0;
   switch (manualCommand) {
   case CMD_FORWARD:
     drive_forward(manualValue);
@@ -235,12 +247,15 @@ void FSM::transitionTo(State next) {
 // -------------------------------------------------------------------
 
 void FSM::driveUntilWall(State next) {
-  if (wall) transitionTo(next);
-  else drive_forward(FORWARD_CPS);
+  if (wall)
+    transitionTo(next);
+  else
+    drive_forward(FORWARD_CPS);
 }
 
 void FSM::turnThen(int degrees, State next) {
-  if (drive_turn(degrees, entryLeft, entryRight)) transitionTo(next);
+  if (drive_turn(degrees, entryLeft, entryRight))
+    transitionTo(next);
 }
 
 // why do we need a stop at wall param
