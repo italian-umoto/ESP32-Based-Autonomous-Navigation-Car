@@ -120,7 +120,10 @@ void FSM::handleCommand() {
   }
 }
 
-static constexpr uint32_t TELEMETRY_PERIOD_MS = 1000;
+// 10 Hz on average. readColors() takes ~65 ms at SETTLE_US = 15000, so
+// individual gaps alternate between roughly 65 and 130 ms; the timestamp in
+// each line shows the real spacing.
+static constexpr uint32_t TELEMETRY_PERIOD_MS = 100;
 
 void FSM::readSensors() {
   const CollisionReading collision = readCollisionDetection();
@@ -133,13 +136,22 @@ void FSM::readSensors() {
   static uint32_t lastTelemetryMs = 0;
   const uint32_t now = millis();
   if (now - lastTelemetryMs >= TELEMETRY_PERIOD_MS) {
-    lastTelemetryMs = now;
+    // step by the period (not = now) so the average rate stays at 10 Hz;
+    // resync if we fell far behind (e.g. a long blocking call)
+    lastTelemetryMs += TELEMETRY_PERIOD_MS;
+    if (now - lastTelemetryMs >= TELEMETRY_PERIOD_MS)
+      lastTelemetryMs = now;
+
+    // CSV payload: ms,state,Lr,Lg,Lb,Lcolor,Rr,Rg,Rb,Rcolor
     char msg[192];
-    snprintf(msg, sizeof msg, "%s color: L=%d,%d,%d R=%d,%d,%d", CLIENT_ID_FSM,
+    snprintf(msg, sizeof msg, "%s color: %lu,%s,%d,%d,%d,%s,%d,%d,%d,%s",
+             CLIENT_ID_FSM, (unsigned long)now, stateName(state),
              readings.left.rawRed, readings.left.rawGreen,
-             readings.left.rawBlue, readings.right.rawRed,
-             readings.right.rawGreen, readings.right.rawBlue);
+             readings.left.rawBlue, colorToString(leftColor),
+             readings.right.rawRed, readings.right.rawGreen,
+             readings.right.rawBlue, colorToString(rightColor));
     publishTelemetry(msg);
+    Serial.println(msg); // same line over USB, for logging without Wi-Fi
   }
 }
 

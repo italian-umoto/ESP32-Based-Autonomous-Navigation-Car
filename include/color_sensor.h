@@ -8,6 +8,7 @@ struct ColorReading {
   int rawGreen;
   int rawBlue;
   float intensity;
+  float blackRed, blackGreen, blackBlue;
 };
 
 struct ColorReadings {
@@ -33,3 +34,4 @@ float targetStrength(const ColorReading &reading, DetectedColor target);
 // debug
 const char *colorToString(DetectedColor color);
 void printReading(const ColorReading &reading, DetectedColor color);
+void resetBlackBaseline();

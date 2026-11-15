@@ -15,10 +15,7 @@ void setup() {
   delay(3000);
 }
 
-void loop() {
-  fsm.tick();
-  delay(500);
-}
+void loop() { fsm.tick(); }
 
 // void setup() {
 //   Serial.begin(115200);
