@@ -22,8 +22,8 @@ void colorInit() {
   resetLED();
 
   analogReadResolution(12);
-  analogSetPinAttenuation(LEFT_COLOR_SENSOR_PIN, ADC_0db);
-  analogSetPinAttenuation(RIGHT_COLOR_SENSOR_PIN, ADC_0db);
+  analogSetPinAttenuation(LEFT_COLOR_SENSOR_PIN, ADC_11db);
+  analogSetPinAttenuation(RIGHT_COLOR_SENSOR_PIN, ADC_11db);
 
 }
 
@@ -110,35 +110,11 @@ DetectedColor classifyColor(const ColorReading &reading) {
     return DetectedColor::Blue;
   }
 
-  // STRONG RED
-  if (r >= 95 &&
-      g <= 95 &&
-      b <= 50 &&
-      (r - g) >= 20) {
-    return DetectedColor::Red;
-  }
-
-  // WEAK RED
-  if (r >= 48 &&
-      r <= 85 &&
-      g <= 25 &&
-      b <= 12) {
-    return DetectedColor::Red;
-  }
-
-  // WEAK RED
-  if (r >= 26 &&
-      r <= 45 &&
-      g <= 19 &&
-      b <= 3) {
-    return DetectedColor::Red;
-  }
-
-  // WEAK RED
-  if (r >= 17 &&
-      r <= 25 &&
-      g <= 12 &&
-      b <= 13) {
+  // RED
+  if (r >= 8 &&
+      g <= 35 &&
+      b <= 20 &&
+      r >= g - 8) {
     return DetectedColor::Red;
   }
 
