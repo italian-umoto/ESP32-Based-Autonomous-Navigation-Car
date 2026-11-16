@@ -17,7 +17,6 @@ void setup() {
 
 void loop() {
   fsm.tick();
-  delay(500);
 }
 
 // void setup() {

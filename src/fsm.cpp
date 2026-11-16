@@ -7,6 +7,8 @@
 #include "pins.h"
 #include "websocket.h"
 #include <Arduino.h>
+#include <esp_random.h>
+#include <esp_timer.h>
 
 const char *CLIENT_ID_FSM = "MAGICSMOKE67";
 
@@ -120,7 +122,8 @@ void FSM::handleCommand() {
   }
 }
 
-static constexpr uint32_t TELEMETRY_PERIOD_MS = 1000;
+static constexpr uint32_t TELEMETRY_PERIOD_MS = 100;
+
 
 void FSM::readSensors() {
   const CollisionReading collision = readCollisionDetection();
@@ -131,17 +134,43 @@ void FSM::readSensors() {
   rightColor = classifyColor(readings.right);
 
   static uint32_t lastTelemetryMs = 0;
+  static const uint32_t bootId = esp_random();
+  static uint32_t sequence = 0;
+
   const uint32_t now = millis();
+
   if (now - lastTelemetryMs >= TELEMETRY_PERIOD_MS) {
     lastTelemetryMs = now;
-    char msg[192];
-    snprintf(msg, sizeof msg, "%s color: L=%d,%d,%d R=%d,%d,%d", CLIENT_ID_FSM,
-             readings.left.rawRed, readings.left.rawGreen,
-             readings.left.rawBlue, readings.right.rawRed,
-             readings.right.rawGreen, readings.right.rawBlue);
+
+    char msg[256];
+
+    snprintf(
+      msg,
+      sizeof(msg),
+      "%s color: boot=%08lx seq=%lu t_ms=%llu "
+      "L=%d,%d,%d (%s) R=%d,%d,%d (%s)",
+      CLIENT_ID_FSM,
+      (unsigned long)bootId,
+      (unsigned long)sequence++,
+      (unsigned long long)(esp_timer_get_time() / 1000),
+
+      // Left sensor raw readings and detected color
+      readings.left.rawRed,
+      readings.left.rawGreen,
+      readings.left.rawBlue,
+      colorToString(leftColor),
+
+      // Right sensor raw readings and detected color
+      readings.right.rawRed,
+      readings.right.rawGreen,
+      readings.right.rawBlue,
+      colorToString(rightColor)
+    );
+
     publishTelemetry(msg);
   }
 }
+
 
 void FSM::handleManual() {
   // a wall cancels whatever manual command was running
@@ -272,7 +301,7 @@ void FSM::searchForLane(DetectedColor color, State next, bool stopAtWall) {
 }
 
 // this is to put the robot over the line it just found
-// Drive straight ALIGN_ADVANCE_COUNTS, then go to `next`
+// Drive straight ALIGN_ADVANCE_COUNTS, then go to next
 void FSM::advanceThen(State next) {
   const int traveled = (abs(left_encoder_count() - entryLeft) +
                         abs(right_encoder_count() - entryRight)) /
