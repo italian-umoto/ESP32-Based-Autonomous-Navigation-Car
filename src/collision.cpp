@@ -2,17 +2,21 @@
 #include "pins.h"
 #include <Arduino.h>
 
+<<<<<<< HEAD
 static const int COLLISION_THRESHOLD = 50;
 static const int NUM_SAMPLES = 4;
+=======
+static const int COLLISION_THRESHOLD = 400;
+static const int NUM_SAMPLES = 10;
+
+long filtered_dist;
+>>>>>>> fe5872ea04b361cd6b877682ef066f4fb9d73b47
 
 static int readAverageCollison() {
-    long sum = 0;
+    long dist = analogRead(COLLISION_SENSOR_PIN)
+    filtered_dist = (filtered_dist * (NUM_SAMPLES - 1) + dist) / NUM_SAMPLES;
 
-    for (int i = 0; i < NUM_SAMPLES; i++) {
-        sum += analogRead(COLLISION_SENSOR_PIN);
-    }
-
-    return sum / NUM_SAMPLES;
+    return filtered_dist;
 }
 
 void setupCollisionDetection() {
