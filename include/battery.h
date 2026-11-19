@@ -8,7 +8,7 @@
 #pragma once
 
 #define THRESHOLD_VOLTAGE 9.0
-#define R_SHUNT 2.56E6
+#define R_SHUNT 2.2E6
 #define R_DIV 4.7E6
 
 

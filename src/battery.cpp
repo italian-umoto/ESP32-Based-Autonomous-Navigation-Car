@@ -3,8 +3,7 @@
 #include <queue>
 
 #define SAMPLES 10
-#define VOLT_STEP 3.3 / 4096
-#define VOLT_MULT_RATIO (R_SHUNT + R_DIV) / R_SHUNT
+#define VOLT_MULT_RATIO R_SHUNT / (R_SHUNT + R_DIV)
 
 double filtered_voltage;
 
@@ -14,14 +13,14 @@ void batteryInit() {
 }
 
 BatteryLevel checkBatteryLevel() {
-    double voltage = analogRead(BAT_VOLTAGE_PIN) * VOLT_STEP * VOLT_MULT_RATIO;
+    double voltage = analogRead(BAT_VOLTAGE_PIN) * VOLT_MULT_RATIO;
 
     filtered_voltage = (filtered_voltage * (SAMPLES - 1) + voltage) / SAMPLES;
 
     bool bat_stat = (filtered_voltage < THRESHOLD_VOLTAGE);
     char str[50] = "";
     snprintf(str, 50, "Battery status: %.4fV\n", filtered_voltage);
-    Serial.write(str);
+    // Serial.write(str);
     digitalWrite(BAT_STATUS_LED_PIN, bat_stat? HIGH : LOW);
     return (BatteryLevel) bat_stat;
 }
