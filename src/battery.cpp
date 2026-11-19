@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include "battery.h"
+#include "pins.h"
 #include <queue>
 
 #define SAMPLES 10

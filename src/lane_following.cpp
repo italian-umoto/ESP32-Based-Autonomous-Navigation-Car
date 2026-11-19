@@ -118,7 +118,7 @@ void performLaneFollowing(DetectedColor target,
 
   // Differential wheel control
   drive_wheels(
-    forward - correction,
-    forward + correction
+    forward + correction,
+    forward - correction
   );
 }

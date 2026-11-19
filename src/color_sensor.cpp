@@ -96,51 +96,20 @@ DetectedColor classifyColor(const ColorReading &reading) {
   const int g = reading.rawGreen;
   const int b = reading.rawBlue;
 
-  // STRONG YELLOW
-  if (r >= 160 &&
-      g >= 135 &&
-      b <= 50) {
-    return DetectedColor::Yellow;
-  }
-
-  // WEAK YELLOW
-  if (r >= 100 &&
-      g >= 135 &&
-      b <= 45 &&
-      g - b >= 110) {
+  // YELLOW
+  if (r >= 650 && g >= 700) {
     return DetectedColor::Yellow;
   }
 
   // BLUE
-  if (r <= 75 &&
-      (g >= 85 || (g >= 50 && b >= 34))) {
+  if (g >= 550 && b >= 575) {
     return DetectedColor::Blue;
   }
 
-  // STRONG RED
-  if (r >= 90 &&
-      g <= 80 &&
-      b <= 32) {
-    return DetectedColor::Red;
-  }
-
-  // WEAK RED
-  if (r >= 46 &&
-      r < 90 &&
-      g <= 80 &&
-      b <= 32) {
-    return DetectedColor::Red;
-  }
-
-  // VERY WEAK RED
-  if (r >= 15 &&
-      r <= 45 &&
-      g <= 28 &&
-      b >= 1 &&
-      b <= 28 &&
-      (r >= 35 ||
-      (g <= 5 && b <= 5) ||
-      b >= 19)) {
+  // RED
+  if (r >= 250 &&
+      g <= 600 &&
+      b <= 570) {
     return DetectedColor::Red;
   }
 
@@ -149,39 +118,34 @@ DetectedColor classifyColor(const ColorReading &reading) {
 }
 
 
-// Target strength (0 to 1) for lane following
-float targetStrength(const ColorReading &reading, DetectedColor target) {
-  
-  if (target == DetectedColor::Dark || classifyColor(reading) != target)
-    return 0.0f;
+float targetStrength(const ColorReading &reading,
+                     DetectedColor target) {
 
-  float contrast = 0.0f;
-  float scale = 1.0f;
-
-  switch (target) {
-  case DetectedColor::Red:
-    // Red is stronger than green and blue.
-    contrast = reading.red - max(reading.green, reading.blue);
-    scale = 60.0f;
-    break;
-
-  case DetectedColor::Blue:
-    // Blue surfaces produce strong green reflection.
-    contrast = reading.green - reading.red;
-    scale = 140.0f;
-    break;
-
-  case DetectedColor::Yellow:
-    // Red and green are both strong compared to blue.
-    contrast = min(reading.red, reading.green) - reading.blue;
-    scale = 230.0f;
-    break;
-
-  default:
+  if (target == DetectedColor::Dark ||
+      classifyColor(reading) != target) {
     return 0.0f;
   }
 
-  return constrain(contrast / scale, 0.0f, 1.0f);
+  float strength = 0.0f;
+
+  switch (target) {
+    case DetectedColor::Red:
+      strength = (reading.red - 108.0f) / 283.0f;
+      break;
+
+    case DetectedColor::Blue:
+      strength = (reading.red - 108.0f) / 65.0f;
+      break;
+
+    case DetectedColor::Yellow:
+      strength = (reading.red - 108.0f) / 737.0f;
+      break;
+
+    default:
+      return 0.0f;
+  }
+
+  return constrain(strength, 0.0f, 1.0f);
 }
 
 // -------------------------------------------------------------------
