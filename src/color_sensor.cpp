@@ -2,7 +2,7 @@
 #include "pins.h"
 #include <Arduino.h>
 
-constexpr int NUM_SAMPLES = 32; // ADC reads averaged per measurement
+constexpr int NUM_SAMPLES = 16; // ADC reads averaged per measurement
 constexpr int SETTLE_US = 500;  // wait after switching an LED
 
 static void resetLED() {
@@ -91,35 +91,63 @@ ColorReadings readColors() {
   };
 }
 
-// Color classification using raw ADC readings
 DetectedColor classifyColor(const ColorReading &reading) {
   const int r = reading.rawRed;
   const int g = reading.rawGreen;
   const int b = reading.rawBlue;
 
-  // YELLOW
-  if (g >= 80 &&
-      r >= 30 &&
-      b <= 32 &&
-      (r - g) <= 50) {
+  // STRONG YELLOW
+  if (r >= 160 &&
+      g >= 135 &&
+      b <= 50) {
+    return DetectedColor::Yellow;
+  }
+
+  // WEAK YELLOW
+  if (r >= 100 &&
+      g >= 135 &&
+      b <= 45 &&
+      g - b >= 110) {
     return DetectedColor::Yellow;
   }
 
   // BLUE
-  if (g >= 80 && b >= 20) {
+  if (r <= 75 &&
+      (g >= 85 || (g >= 50 && b >= 34))) {
     return DetectedColor::Blue;
   }
 
-  // RED
-  if (r >= 8 &&
-      g <= 35 &&
-      b <= 20 &&
-      r >= g - 8) {
+  // STRONG RED
+  if (r >= 90 &&
+      g <= 80 &&
+      b <= 32) {
     return DetectedColor::Red;
   }
 
+  // WEAK RED
+  if (r >= 46 &&
+      r < 90 &&
+      g <= 80 &&
+      b <= 32) {
+    return DetectedColor::Red;
+  }
+
+  // VERY WEAK RED
+  if (r >= 15 &&
+      r <= 45 &&
+      g <= 28 &&
+      b >= 1 &&
+      b <= 28 &&
+      (r >= 35 ||
+      (g <= 5 && b <= 5) ||
+      b >= 19)) {
+    return DetectedColor::Red;
+  }
+
+  // DARK
   return DetectedColor::Dark;
 }
+
 
 // Target strength (0 to 1) for lane following
 float targetStrength(const ColorReading &reading, DetectedColor target) {

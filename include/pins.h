@@ -1,7 +1,7 @@
 #pragma once
 
 // motor and encoder
-static constexpr int LEFT_M1 = 21;
+static constexpr int LEFT_M1 = 20;
 static constexpr int LEFT_M2 = 4;
 static constexpr int LEFT_A = 41;
 static constexpr int LEFT_B = 42;

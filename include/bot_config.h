@@ -8,7 +8,7 @@ constexpr DetectedColor PRIMARY = DetectedColor::Blue;
 constexpr int TURN_DEG = -80;
 #elif BOT_ID == 1
 constexpr DetectedColor PRIMARY = DetectedColor::Red;
-constexpr int TURN_DEG = -80;
+constexpr int TURN_DEG = 80;
 #else
 #error "BOT_ID must be 1 or 2"
 #endif

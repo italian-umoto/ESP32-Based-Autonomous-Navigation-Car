@@ -2,7 +2,7 @@
 #include "pins.h"
 #include <Arduino.h>
 
-static const int COLLISION_THRESHOLD = 400;
+static const int COLLISION_THRESHOLD = 50;
 static const int NUM_SAMPLES = 4;
 
 static int readAverageCollison() {
@@ -35,5 +35,7 @@ CollisionReading readCollisionDetection() {
     digitalWrite(IR_LED_PIN, LOW);
 
     int reflected = illuminated - background;
-    return {background, illuminated, reflected, reflected > COLLISION_THRESHOLD};
+    // return {background, illuminated, reflected, reflected > COLLISION_THRESHOLD};
+    return {background, illuminated, reflected, false};
+
 }

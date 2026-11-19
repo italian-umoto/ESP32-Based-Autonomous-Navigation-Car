@@ -17,7 +17,7 @@ static constexpr int CONFIRM_READS = 2;
 // Forward duration before alignment. Starting estimate for about 3 inches;
 // tune on the bot at FORWARD_CPS.
 static constexpr int ALIGN_ADVANCE_COUNTS = 600;
-static constexpr int TURNAROUND_DEG = 180;
+static constexpr int TURNAROUND_DEG = -180;
 
 // The bot is not perpendicular to the wall, so it needs to turn a little more
 static constexpr int TURN_YELLOW_DEG = 140;
@@ -148,7 +148,7 @@ void FSM::readSensors() {
       msg,
       sizeof(msg),
       "%s color: boot=%08lx seq=%lu t_ms=%llu "
-      "L=%d,%d,%d (%s) R=%d,%d,%d (%s)",
+      "L=%d,%d,%d (%s) R=%d,%d,%d (%s), Collison: %d",
       CLIENT_ID_FSM,
       (unsigned long)bootId,
       (unsigned long)sequence++,
@@ -164,7 +164,11 @@ void FSM::readSensors() {
       readings.right.rawRed,
       readings.right.rawGreen,
       readings.right.rawBlue,
-      colorToString(rightColor)
+      colorToString(rightColor),
+
+      collision.reflected
+
+
     );
 
     publishTelemetry(msg);

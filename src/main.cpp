@@ -7,12 +7,18 @@
 FSM fsm;
 
 void setup() {
+
+  delay(2500);
+
   Serial.begin(115200);
+
   setup_motors();
-  websocketInit();
   colorInit();
   setupCollisionDetection();
-  delay(3000);
+
+  websocketInit();
+
+  delay(500);
 }
 
 void loop() {
